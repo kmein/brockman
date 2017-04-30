@@ -12,6 +12,7 @@ import Text.RSS.Syntax
 import qualified Text.Feed.Types as Feed
 import qualified Data.BloomFilter as Bloom
 import qualified Data.BloomFilter.Easy as Bloom
+import qualified Data.BloomFilter.Hash as Bloom
 import Control.Concurrent
 import System.Environment
 import System.IO
@@ -45,7 +46,8 @@ main = do
     hSetBuffering stdout LineBuffering
     [url, delayString] <- getArgs
     let delay = read delayString :: Int
-    rec url delay (Bloom.easyList 0.000001 ([] :: [BS.ByteString]))
+    let bloom0 = Bloom.fromList (Bloom.cheapHashes 3) 1024 [""]
+    rec url delay bloom0
     return ()
   where
     rec url delay bloom =
