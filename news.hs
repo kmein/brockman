@@ -75,6 +75,6 @@ main = do
         threadDelay (delay * 10^6)
         rec url delay bloom'
       )
-        `catch` \e -> putStrLn ("Caught " ++ show (e :: SomeException)) >> rec url delay bloom
+        `catch` \e -> hPutStrLn stderr ("Caught " ++ show (e :: SomeException)) >> rec url delay bloom
 
 
