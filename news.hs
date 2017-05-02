@@ -67,7 +67,7 @@ main = do
                     let link = ni_link item in
                     link `Bloom.notElem` bloom
                 ) items
-        mapM_ print (map (\item ->
+        mapM_ BS8.putStrLn (map (\item ->
                 let title = ni_title item
                     link = ni_link item
                 in title <> " " <> link
