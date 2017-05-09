@@ -46,7 +46,7 @@ main = do
     hSetBuffering stdout LineBuffering
     [url, delayString] <- getArgs
     let delay = read delayString :: Int
-    let bloom0 = Bloom.fromList (Bloom.cheapHashes 3) 4096 [""]
+    let bloom0 = Bloom.fromList (Bloom.cheapHashes 17) (2^10 * 1000) [""]
     rec url delay bloom0
     return ()
   where
