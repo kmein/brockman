@@ -9,17 +9,17 @@ cabal-version: >=1.10
 executable brockman
   main-is: Main.hs
   build-depends:
+    aeson,
+    base,
     bloomfilter,
     bytestring,
     feed,
-    microlens,
-    wreq,
-    base,
-    text,
     irc-client,
+    irc-conduit,
+    microlens,
     mtl,
-    aeson,
     stm,
-    irc-conduit
+    text,
+    wreq
   default-language: Haskell2010
   ghc-options: -O2 -Wall -threaded
