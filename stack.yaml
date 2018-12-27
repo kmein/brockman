@@ -1,0 +1,6 @@
+resolver: lts-10.10
+packages:
+- .
+nix:
+  enable: true
+  packages: [zlib]
