@@ -1,13 +1,13 @@
-name: news
+name: brockman
 version: 1.0.0
 license: MIT
-author: lassulus <lassulus@lassul.us>
+author: lassulus <lassulus@lassul.us>, kmein <kieran.meinhardt@gmail.com>
 maintainer: lassulus@lassul.us
 build-type: Simple
 cabal-version: >=1.10
 
-executable news
-  main-is: news.hs
+executable brockman
+  main-is: Main.hs
   build-depends:
     bloomfilter,
     bytestring,
