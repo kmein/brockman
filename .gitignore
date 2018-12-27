@@ -1,6 +1,0 @@
-*.hi
-*.o
-.graveyard
-/dist
-/shell.nix
-result
