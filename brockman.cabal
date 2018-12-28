@@ -11,11 +11,10 @@ executable brockman
   build-depends:
     aeson,
     base,
+    kirk,
     bloomfilter,
     bytestring,
     feed,
-    irc-client,
-    irc-conduit,
     microlens,
     mtl,
     stm,

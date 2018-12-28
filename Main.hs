@@ -13,13 +13,13 @@ import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile, unpack)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
-import qualified Data.Text as Text (pack)
+import qualified Data.Text as Text (pack, unpack)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import GHC.Generics (Generic)
+import Kirk.Config
+import Kirk.Simple
 import Lens.Micro ((&), (^.))
-import Network.IRC.Client
-import Network.IRC.Conduit
 import qualified Network.Wreq as Wreq (get, responseBody)
 import System.Environment (getArgs)
 import qualified Text.Atom.Feed as Atom
@@ -58,51 +58,50 @@ deduplicate var items = do
   writeTVar var $ Bloom.insertList (map (Text.encodeUtf8 . ni_link) items) bloom
   return $ filter (flip Bloom.notElem bloom . Text.encodeUtf8 . ni_link) items
 
-data Config = Config
-  { c_bots :: [Bot]
-  , c_channels :: [ChannelName Text]
+data BrockmanConfig = BrockmanConfig
+  { c_bots :: [NewsBot]
+  , c_channels :: [String]
   } deriving (Generic)
 
-instance FromJSON Config where
+instance FromJSON BrockmanConfig where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
 
-data Bot = Bot
-  { b_nick :: NickName Text
+data NewsBot = NewsBot
+  { b_nick :: String
   , b_feeds :: [String]
   , b_delay :: Int
   } deriving (Generic)
 
-instance FromJSON Bot where
+instance FromJSON NewsBot where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
 
 main :: IO ()
 main = do
-  let connectionC =
-        plainConnection "irc.r" 6667 & set username "news" & set flood 0
   [configFile] <- getArgs
   config <- decode <$> LBS8.readFile configFile
   let bloom0 =
-        Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) ["" :: BS.ByteString]
-  state <- atomically $ newTVar bloom0
+        Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
+  bloom <- atomically $ newTVar bloom0
   forM_ (maybe [] c_bots config) $ \bot -> do
-    let instanceC =
-          defaultInstanceConfig (b_nick bot) &
-          set channels (maybe [] c_channels config)
-    ircState <- newIRCState connectionC instanceC state
-    _ <- forkIO $ runClientWith ircState
+    let botConfig =
+          Config
+            { nick = b_nick bot
+            , msgtarget = maybe [] c_channels config
+            , server_hostname = "irc.r"
+            , server_port = 6667
+            }
     forkIO $
-      flip runIRCAction ircState $ do
-        st <- State.get
-        let cs = get channels instanceC
+      run botConfig $ \handle -> do
+        handshake botConfig handle
+        _ <- forkIO $ ircAgent botConfig handle
         forever $
           forM_ (b_feeds bot) $ \url -> do
             r <- liftIO $ Wreq.get url
             let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
-            items <- liftIO $ atomically $ deduplicate st $ feedToItems f
-            forM_ items $ \item -> forM_ cs $ \channel -> sendTo channel item
+            items <- liftIO $ atomically $ deduplicate bloom $ feedToItems f
+            forM_ items $ \item -> privmsg botConfig handle (display item)
             liftIO $ threadDelay (b_delay bot * 10 ^ 6)
   forever $ threadDelay $ 10 ^ 6
   where
-    sendTo channel = send . Privmsg channel . Right . display
-    display (Item t l) = t <> " " <> l
+    display (Item t l) = unwords [Text.unpack t, Text.unpack l]
 
