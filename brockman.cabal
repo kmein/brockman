@@ -10,13 +10,13 @@ executable brockman
   main-is: Main.hs
   build-depends:
     aeson,
+    async,
     base,
     kirk,
     bloomfilter,
     bytestring,
     feed,
     microlens,
-    mtl,
     stm,
     text,
     wreq

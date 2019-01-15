@@ -27,8 +27,8 @@ let
       license = stdenv.lib.licenses.mit;
     };
 
-  f = { mkDerivation, aeson, base, bloomfilter, bytestring, feed
-      , irc-client, irc-conduit, microlens, mtl, stdenv, stm, text, wreq, kirk
+  brockman = { mkDerivation, aeson, async, base, bloomfilter, bytestring, feed
+      , irc-client, irc-conduit, microlens, stdenv, stm, text, wreq, kirk
       }:
       mkDerivation {
         pname = "brockman";
@@ -37,8 +37,8 @@ let
         isLibrary = false;
         isExecutable = true;
         executableHaskellDepends = [
-          aeson base bloomfilter bytestring feed irc-client irc-conduit
-          microlens mtl stm text wreq kirk
+          aeson async base bloomfilter bytestring feed irc-client irc-conduit
+          microlens stm text wreq kirk
         ];
         license = stdenv.lib.licenses.mit;
       };
@@ -49,10 +49,8 @@ let
 
   variant = if doBenchmark then pkgs.haskell.lib.doBenchmark else pkgs.lib.id;
 
-  drv = variant (haskellPackages.callPackage f {
+  drv = variant (haskellPackages.callPackage brockman {
     kirk = haskellPackages.callPackage kirk {};
   });
 
-in
-
-  if pkgs.lib.inNixShell then drv.env else drv
+in if pkgs.lib.inNixShell then drv.env else drv

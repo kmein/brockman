@@ -1,10 +1,10 @@
-{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase, OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase, OverloadedStrings, ScopedTypeVariables #-}
 
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Exception (handle, SomeException)
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Monad (forM_, forever)
-import qualified Control.Monad.State as State
-import Control.Monad.Trans
 import Data.Aeson
 import Data.BloomFilter (Bloom)
 import qualified Data.BloomFilter as Bloom (fromList, insertList, notElem)
@@ -12,14 +12,13 @@ import Data.BloomFilter.Hash (cheapHashes)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile, unpack)
 import Data.Maybe (fromMaybe)
-import Data.Monoid ((<>))
 import qualified Data.Text as Text (pack, unpack)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import GHC.Generics (Generic)
 import Kirk.Config
 import Kirk.Simple
-import Lens.Micro ((&), (^.))
+import Lens.Micro ((^.))
 import qualified Network.Wreq as Wreq (get, responseBody)
 import System.Environment (getArgs)
 import qualified Text.Atom.Feed as Atom
@@ -31,8 +30,6 @@ data Item = Item
   { ni_title :: Text
   , ni_link :: Text
   } deriving (Show)
-
-type Filter = Bloom BS.ByteString
 
 feedToItems :: Maybe Feed.Feed -> [Item]
 feedToItems =
@@ -52,7 +49,7 @@ feedToItems =
         title = fromMaybe "untitled" (rssItemTitle item)
         links = maybe [] pure (rssItemLink item)
 
-deduplicate :: TVar Filter -> [Item] -> STM [Item]
+deduplicate :: TVar (Bloom BS.ByteString) -> [Item] -> STM [Item]
 deduplicate var items = do
   bloom <- readTVar var
   writeTVar var $ Bloom.insertList (map (Text.encodeUtf8 . ni_link) items) bloom
@@ -75,33 +72,54 @@ data NewsBot = NewsBot
 instance FromJSON NewsBot where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
 
+textBotThread :: TVar (Bloom BS.ByteString) -> NewsBot -> IO ()
+textBotThread bloom bot =
+  handle (\(_ :: SomeException) -> textBotThread bloom bot) $
+  forever $
+  forM_ (b_feeds bot) $ \url -> do
+    r <- Wreq.get url
+    let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
+    items <- atomically $ deduplicate bloom $ feedToItems f
+    forM_ items $ \item -> putStrLn (display item)
+    threadDelay (b_delay bot * 10 ^ 6)
+  where
+    display (Item t l) = unwords [Text.unpack t, Text.unpack l]
+
+botThread :: TVar (Bloom BS.ByteString) -> NewsBot -> Config -> IO ()
+botThread bloom bot botConfig =
+  run botConfig $ \h -> do
+    handshake botConfig h
+    race_ (ircAgent botConfig h) $
+      eloop $
+      forever $
+      forM_ (b_feeds bot) $ \url -> do
+        r <- Wreq.get url
+        let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
+        items <- atomically $ deduplicate bloom $ feedToItems f
+        forM_ items $ \item -> privmsg botConfig h (display item)
+        threadDelay (b_delay bot * 10 ^ 6)
+  where
+    display (Item t l) = unwords [Text.unpack t, Text.unpack l]
+
+eloop :: IO a -> IO a
+eloop p = handle (\(_ :: SomeException) -> p) p
+
 main :: IO ()
 main = do
   [configFile] <- getArgs
   config <- decode <$> LBS8.readFile configFile
-  let bloom0 =
-        Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
+  let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
   bloom <- atomically $ newTVar bloom0
-  forM_ (maybe [] c_bots config) $ \bot -> do
-    let botConfig =
-          Config
-            { nick = b_nick bot
-            , msgtarget = maybe [] c_channels config
-            , server_hostname = "irc.r"
-            , server_port = 6667
-            }
-    forkIO $
-      run botConfig $ \handle -> do
-        handshake botConfig handle
-        _ <- forkIO $ ircAgent botConfig handle
-        forever $
-          forM_ (b_feeds bot) $ \url -> do
-            r <- liftIO $ Wreq.get url
-            let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
-            items <- liftIO $ atomically $ deduplicate bloom $ feedToItems f
-            forM_ items $ \item -> privmsg botConfig handle (display item)
-            liftIO $ threadDelay (b_delay bot * 10 ^ 6)
+  forConcurrently_ (maybe [] c_bots config) $ \bot ->
+    eloop $
+    botThread
+      bloom
+      bot
+      Config
+        { nick = b_nick bot
+        , msgtarget = maybe [] c_channels config
+        , server_hostname = "irc.r"
+        , server_port = 6667
+        }
   forever $ threadDelay $ 10 ^ 6
-  where
-    display (Item t l) = unwords [Text.unpack t, Text.unpack l]
 
