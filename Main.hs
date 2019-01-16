@@ -1,9 +1,11 @@
-{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase,
+  OverloadedStrings, ScopedTypeVariables, TypeApplications,
+  ViewPatterns #-}
 
-import Control.Exception (handle, SomeException)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async
 import Control.Concurrent.STM
+import Control.Exception (SomeException, handle)
 import Control.Monad (forM_, forever)
 import Data.Aeson
 import Data.BloomFilter (Bloom)
@@ -20,7 +22,10 @@ import Kirk.Config
 import Kirk.Simple
 import Lens.Micro ((^.))
 import qualified Network.Wreq as Wreq (get, responseBody)
-import System.Environment (getArgs)
+import Safe (readMay)
+import System.Environment (getArgs, getProgName)
+import System.IO (hPutStrLn, stderr)
+import System.Exit (exitFailure)
 import qualified Text.Atom.Feed as Atom
 import Text.Feed.Import (parseFeedString)
 import qualified Text.Feed.Types as Feed (Feed(..))
@@ -72,19 +77,6 @@ data NewsBot = NewsBot
 instance FromJSON NewsBot where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
 
-textBotThread :: TVar (Bloom BS.ByteString) -> NewsBot -> IO ()
-textBotThread bloom bot =
-  handle (\(_ :: SomeException) -> textBotThread bloom bot) $
-  forever $
-  forM_ (b_feeds bot) $ \url -> do
-    r <- Wreq.get url
-    let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
-    items <- atomically $ deduplicate bloom $ feedToItems f
-    forM_ items $ \item -> putStrLn (display item)
-    threadDelay (b_delay bot * 10 ^ 6)
-  where
-    display (Item t l) = unwords [Text.unpack t, Text.unpack l]
-
 botThread :: TVar (Bloom BS.ByteString) -> NewsBot -> Config -> IO ()
 botThread bloom bot botConfig =
   run botConfig $ \h -> do
@@ -97,29 +89,38 @@ botThread bloom bot botConfig =
         let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
         items <- atomically $ deduplicate bloom $ feedToItems f
         forM_ items $ \item -> privmsg botConfig h (display item)
-        threadDelay (b_delay bot * 10 ^ 6)
+        sleepSeconds (b_delay bot)
   where
     display (Item t l) = unwords [Text.unpack t, Text.unpack l]
 
 eloop :: IO a -> IO a
-eloop p = handle (\(_ :: SomeException) -> p) p
+eloop = handle @SomeException =<< const
+
+sleepSeconds :: Int -> IO ()
+sleepSeconds n = threadDelay (n * 10 ^ 6)
 
 main :: IO ()
 main = do
-  [configFile] <- getArgs
-  config <- decode <$> LBS8.readFile configFile
-  let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
-  bloom <- atomically $ newTVar bloom0
-  forConcurrently_ (maybe [] c_bots config) $ \bot ->
-    eloop $
-    botThread
-      bloom
-      bot
-      Config
-        { nick = b_nick bot
-        , msgtarget = maybe [] c_channels config
-        , server_hostname = "irc.r"
-        , server_port = 6667
-        }
-  forever $ threadDelay $ 10 ^ 6
+  argv <- getArgs
+  case argv of
+    [ircHost, readMay -> Just ircPort, configFile] -> do
+      config <- decode <$> LBS8.readFile configFile
+      let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
+      bloom <- atomically $ newTVar bloom0
+      forConcurrently_ (maybe [] c_bots config) $ \bot ->
+        eloop $
+        botThread
+          bloom
+          bot
+          Config
+            { nick = b_nick bot
+            , msgtarget = maybe [] c_channels config
+            , server_hostname = ircHost
+            , server_port = ircPort
+            }
+      forever $ sleepSeconds 1
+    _ -> do
+      programName <- getProgName
+      hPutStrLn stderr $ "Usage: " ++ programName ++ " IRC-SERVER IRC-PORT CONFIG"
+      exitFailure
 

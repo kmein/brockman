@@ -17,6 +17,7 @@ executable brockman
     bytestring,
     feed,
     microlens,
+    safe,
     stm,
     text,
     wreq
