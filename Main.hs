@@ -81,15 +81,16 @@ botThread :: TVar (Bloom BS.ByteString) -> NewsBot -> Config -> IO ()
 botThread bloom bot botConfig =
   run botConfig $ \h -> do
     handshake botConfig h
-    race_ (ircAgent botConfig h) $
+    race_ (ircAgent botConfig h) $ do
+      privmsg botConfig h "/UMODE +D"
       eloop $
-      forever $
-      forM_ (b_feeds bot) $ \url -> do
-        r <- Wreq.get url
-        let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
-        items <- atomically $ deduplicate bloom $ feedToItems f
-        forM_ items $ \item -> privmsg botConfig h (display item)
-        sleepSeconds (b_delay bot)
+        forever $
+        forM_ (b_feeds bot) $ \url -> do
+          r <- Wreq.get url
+          let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
+          items <- atomically $ deduplicate bloom $ feedToItems f
+          forM_ items $ privmsg botConfig h . display
+          sleepSeconds (b_delay bot)
   where
     display (Item t l) = unwords [Text.unpack t, Text.unpack l]
 
