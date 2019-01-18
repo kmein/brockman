@@ -24,11 +24,9 @@ brockmanOptions = do
       (long "port" <> short 'p' <> metavar "PORT" <> help "IRC server port" <>
        value 6667 <>
        showDefault)
-  shortener <-
-    optional $
-    strOption
-      (long "shortener" <> short 's' <> metavar "URL" <>
-       help "shortener for link URLs")
+  shorten <-
+    switch (long "shorten" <> help "shorten links")
+  useSSL <- switch (long "ssl" <> help "use SSL")
   pure BrockmanOptions {..}
 
 main :: IO ()

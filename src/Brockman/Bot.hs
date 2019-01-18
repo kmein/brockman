@@ -11,10 +11,10 @@ import qualified Data.ByteString.Lazy as BL (toStrict)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (unpack)
 import Data.Text (unpack)
 import qualified Data.Text as Text (unwords)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Data.Text.Encoding (decodeUtf8)
 import Lens.Micro ((^.))
 import Network.IRC.Kirk
-import qualified Network.Wreq as Wreq (get, post, responseBody)
+import qualified Network.Wreq as Wreq (get, post, responseBody, FormParam((:=)))
 import Text.Feed.Import (parseFeedString)
 
 import Brockman.Feed
@@ -33,7 +33,7 @@ botThread bloom bot config BrockmanOptions {..} =
           r <- Wreq.get $ unpack url
           let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
           items <- atomically $ deduplicate bloom $ feedToItems f
-          forM_ items $ shorten shortener >=> (privmsg botConfig h . display)
+          forM_ items $ (if shorten then goify else pure) >=> (privmsg botConfig h . display)
           sleepSeconds (b_delay bot)
   where
     display item = Text.unwords [fi_title item, fi_link item]
@@ -45,8 +45,7 @@ botThread bloom bot config BrockmanOptions {..} =
         , server_port = ircPort
         }
 
-shorten :: Maybe String -> FeedItem -> IO FeedItem
-shorten Nothing item = pure item
-shorten (Just url) item = do
-  r <- Wreq.post url (encodeUtf8 $ fi_link item)
+goify :: FeedItem -> IO FeedItem
+goify  item = do
+  r <- Wreq.post "http://go.lassul.us" ["uri" Wreq.:= fi_link item]
   pure item { fi_link = decodeUtf8 $ BL.toStrict $ r ^. Wreq.responseBody }
