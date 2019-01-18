@@ -7,8 +7,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "kmein";
     repo = "kirk";
-    rev = "602646765fcfc4aa7b161c9d12f44d2b7c424a60";
-    sha256 = "1zf25vszhjb0jv8cn1kbsbra95glw41jlbv8z6zpm1glk283bv5h";
+    rev = "9b591cd17b631a8fceab7af94760493d375ee303";
+    sha256 = "174b2jsnhs3z5kqnqv9fl3k7s94whcd6zzl0blwq1lh2rxp88skf";
     fetchSubmodules = true;
   };
   isLibrary = true;

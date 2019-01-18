@@ -12,9 +12,8 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8 (unpack)
 import Data.Text (unpack)
 import qualified Data.Text as Text (unwords)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Kirk.Config
-import Kirk.Simple
 import Lens.Micro ((^.))
+import Network.IRC.Kirk
 import qualified Network.Wreq as Wreq (get, post, responseBody)
 import Text.Feed.Import (parseFeedString)
 
