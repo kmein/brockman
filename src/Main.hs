@@ -24,8 +24,7 @@ brockmanOptions = do
       (long "port" <> short 'p' <> metavar "PORT" <> help "IRC server port" <>
        value 6667 <>
        showDefault)
-  shorten <-
-    switch (long "shorten" <> help "shorten links")
+  shorten <- switch (long "shorten" <> help "shorten links")
   useSSL <- switch (long "ssl" <> help "use SSL")
   pure BrockmanOptions {..}
 
@@ -40,10 +39,5 @@ main = do
   let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
   bloom <- atomically $ newTVar bloom0
   forConcurrently_ (maybe [] c_bots config) $ \bot ->
-    eloop $
-    botThread
-      bloom
-      bot
-      config
-      options
+    eloop $ botThread bloom bot config options
   forever $ sleepSeconds 1

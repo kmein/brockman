@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+
 module Brockman.Types where
 
 import Data.Aeson
@@ -30,4 +31,3 @@ data BrockmanOptions = BrockmanOptions
   , shorten :: Bool
   , useSSL :: Bool
   }
-

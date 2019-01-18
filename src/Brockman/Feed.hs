@@ -1,16 +1,17 @@
 {-# LANGUAGE LambdaCase, OverloadedStrings #-}
+
 module Brockman.Feed where
 
-import Data.Text (Text, pack)
-import qualified Text.Atom.Feed as Atom
+import Control.Concurrent.STM
+import Data.BloomFilter (Bloom)
+import qualified Data.BloomFilter as Bloom (insertList, notElem)
+import qualified Data.ByteString as BS (ByteString)
 import Data.Maybe (fromMaybe)
+import Data.Text (Text, pack)
+import qualified Data.Text.Encoding as Text (encodeUtf8)
+import qualified Text.Atom.Feed as Atom
 import qualified Text.Feed.Types as Feed (Feed(..))
 import Text.RSS.Syntax (RSSItem(..), rssChannel, rssItems)
-import Data.BloomFilter (Bloom)
-import Control.Concurrent.STM
-import qualified Data.ByteString as BS (ByteString)
-import qualified Data.BloomFilter as Bloom (insertList, notElem)
-import qualified Data.Text.Encoding as Text (encodeUtf8)
 
 data FeedItem = FeedItem
   { fi_title :: Text
@@ -40,4 +41,3 @@ deduplicate var items = do
   bloom <- readTVar var
   writeTVar var $ Bloom.insertList (map (Text.encodeUtf8 . fi_link) items) bloom
   return $ filter (flip Bloom.notElem bloom . Text.encodeUtf8 . fi_link) items
-

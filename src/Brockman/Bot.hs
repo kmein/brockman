@@ -14,14 +14,19 @@ import qualified Data.Text as Text (unwords)
 import Data.Text.Encoding (decodeUtf8)
 import Lens.Micro ((^.))
 import Network.IRC.Kirk
-import qualified Network.Wreq as Wreq (get, post, responseBody, FormParam((:=)))
+import qualified Network.Wreq as Wreq (FormParam((:=)), get, post, responseBody)
 import Text.Feed.Import (parseFeedString)
 
 import Brockman.Feed
 import Brockman.Types
 import Brockman.Util (eloop, sleepSeconds)
 
-botThread :: TVar (Bloom BS.ByteString) -> NewsBot -> Maybe BrockmanConfig -> BrockmanOptions -> IO ()
+botThread ::
+     TVar (Bloom BS.ByteString)
+  -> NewsBot
+  -> Maybe BrockmanConfig
+  -> BrockmanOptions
+  -> IO ()
 botThread bloom bot config BrockmanOptions {..} =
   run botConfig $ \h -> do
     handshake botConfig h
@@ -33,7 +38,11 @@ botThread bloom bot config BrockmanOptions {..} =
           r <- Wreq.get $ unpack url
           let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
           items <- atomically $ deduplicate bloom $ feedToItems f
-          forM_ items $ (if shorten then goify else pure) >=> (privmsg botConfig h . display)
+          forM_ items $
+            (if shorten
+               then goify
+               else pure) >=>
+            (privmsg botConfig h . display)
           sleepSeconds (b_delay bot)
   where
     display item = Text.unwords [fi_title item, fi_link item]
@@ -46,6 +55,6 @@ botThread bloom bot config BrockmanOptions {..} =
         }
 
 goify :: FeedItem -> IO FeedItem
-goify  item = do
+goify item = do
   r <- Wreq.post "http://go.lassul.us" ["uri" Wreq.:= fi_link item]
-  pure item { fi_link = decodeUtf8 $ BL.toStrict $ r ^. Wreq.responseBody }
+  pure item {fi_link = decodeUtf8 $ BL.toStrict $ r ^. Wreq.responseBody}
