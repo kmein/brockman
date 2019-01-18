@@ -1,2 +1,2 @@
 language: nix
-script: nix-build -A tarball shell.nix
+script: nix-build shell.nix
