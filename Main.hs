@@ -14,8 +14,8 @@ import Data.BloomFilter.Hash (cheapHashes)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile, unpack)
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as Text (pack, unpack)
-import Data.Text (Text)
+import Data.Text (Text, pack, unpack)
+import Data.Text.IO (hPutStrLn)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import GHC.Generics (Generic)
 import Kirk.Config
@@ -24,7 +24,7 @@ import Lens.Micro ((^.))
 import qualified Network.Wreq as Wreq (get, responseBody)
 import Safe (readMay)
 import System.Environment (getArgs, getProgName)
-import System.IO (hPutStrLn, stderr)
+import System.IO (stderr)
 import System.Exit (exitFailure)
 import qualified Text.Atom.Feed as Atom
 import Text.Feed.Import (parseFeedString)
@@ -47,7 +47,7 @@ feedToItems =
   where
     atomEntryToItems entry = map (Item title) links
       where
-        title = Text.pack $ Atom.txtToString (Atom.entryTitle entry)
+        title = pack $ Atom.txtToString $ Atom.entryTitle entry
         links = map Atom.linkHref (Atom.entryLinks entry)
     rssItemToItems item = map (Item title) links
       where
@@ -62,15 +62,15 @@ deduplicate var items = do
 
 data BrockmanConfig = BrockmanConfig
   { c_bots :: [NewsBot]
-  , c_channels :: [String]
+  , c_channels :: [Text]
   } deriving (Generic)
 
 instance FromJSON BrockmanConfig where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
 
 data NewsBot = NewsBot
-  { b_nick :: String
-  , b_feeds :: [String]
+  { b_nick :: Text
+  , b_feeds :: [Text]
   , b_delay :: Int
   } deriving (Generic)
 
@@ -82,17 +82,17 @@ botThread bloom bot botConfig =
   run botConfig $ \h -> do
     handshake botConfig h
     race_ (ircAgent botConfig h) $ do
-      privmsg botConfig h "/UMODE +D"
+      hPutStrLn h $ "MODE " <> b_nick bot <> " +D"
       eloop $
         forever $
         forM_ (b_feeds bot) $ \url -> do
-          r <- Wreq.get url
+          r <- Wreq.get $ unpack url
           let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
           items <- atomically $ deduplicate bloom $ feedToItems f
           forM_ items $ privmsg botConfig h . display
           sleepSeconds (b_delay bot)
   where
-    display (Item t l) = unwords [Text.unpack t, Text.unpack l]
+    display (Item t l) = unwords [unpack t, unpack l]
 
 eloop :: IO a -> IO a
 eloop = handle @SomeException =<< const
@@ -114,14 +114,14 @@ main = do
           bloom
           bot
           Config
-            { nick = b_nick bot
-            , msgtarget = maybe [] c_channels config
+            { nick = unpack $ b_nick bot
+            , msgtarget = maybe [] (map unpack . c_channels) config
             , server_hostname = ircHost
             , server_port = ircPort
             }
       forever $ sleepSeconds 1
     _ -> do
-      programName <- getProgName
-      hPutStrLn stderr $ "Usage: " ++ programName ++ " IRC-SERVER IRC-PORT CONFIG"
+      programName <- pack <$> getProgName
+      hPutStrLn stderr $ "Usage: " <> programName <> " IRC-SERVER IRC-PORT CONFIG"
       exitFailure
 
