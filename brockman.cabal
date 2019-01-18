@@ -1,8 +1,8 @@
 name: brockman
-version: 1.0.1
+version: 1.0.2
 license: MIT
 author: lassulus <lassulus@lassul.us>, kmein <kieran.meinhardt@gmail.com>
-maintainer: lassulus@lassul.us
+maintainer: kmein <kieran.meinhardt@gmail.com>
 build-type: Simple
 cabal-version: >=1.10
 

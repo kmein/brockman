@@ -1,13 +1,14 @@
-{ mkDerivation, async, base, bytestring, fetchgit, network
+{ mkDerivation, async, base, bytestring, fetchFromGitHub, network
 , optparse-applicative, stdenv, text
 }:
 mkDerivation {
   pname = "kirk";
   version = "1.0.1";
-  src = fetchgit {
-    url = "https://cgit.krebsco.de/kirk/";
-    sha256 = "1acsmmc485c54axpy9bd0320j18hs261vl1vdxns4n04sxzqd7k0";
-    rev = "cdf3cb373af8f9b03a9487a63eb32e0226913589";
+  src = fetchFromGitHub {
+    owner = "kmein";
+    repo = "kirk";
+    sha256 = "16x4zry1939dbhxmki27wq34pkhmvf8nwfax2fr18mnyyclmh635";
+    rev = "c64b22acee08a6545a72d3254d08c88c6d4a5038";
     fetchSubmodules = true;
   };
   isLibrary = true;

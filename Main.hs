@@ -15,21 +15,23 @@ import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile, unpack)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack, unpack)
-import Data.Text.IO (hPutStrLn)
+import qualified Data.Text as Text (unwords)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
+import Data.Text.IO (hPutStrLn)
 import GHC.Generics (Generic)
-import Kirk.Config
-import Kirk.Simple
 import Lens.Micro ((^.))
 import qualified Network.Wreq as Wreq (get, responseBody)
 import Safe (readMay)
 import System.Environment (getArgs, getProgName)
-import System.IO (stderr)
 import System.Exit (exitFailure)
+import System.IO (stderr)
 import qualified Text.Atom.Feed as Atom
 import Text.Feed.Import (parseFeedString)
 import qualified Text.Feed.Types as Feed (Feed(..))
 import Text.RSS.Syntax (RSSItem(..), rssChannel, rssItems)
+
+import Kirk.Config
+import Kirk.Simple
 
 data Item = Item
   { ni_title :: Text
@@ -92,7 +94,7 @@ botThread bloom bot botConfig =
           forM_ items $ privmsg botConfig h . display
           sleepSeconds (b_delay bot)
   where
-    display (Item t l) = unwords [unpack t, unpack l]
+    display (Item t l) = Text.unwords [t, l]
 
 eloop :: IO a -> IO a
 eloop = handle @SomeException =<< const
@@ -114,14 +116,14 @@ main = do
           bloom
           bot
           Config
-            { nick = unpack $ b_nick bot
-            , msgtarget = maybe [] (map unpack . c_channels) config
+            { nick = b_nick bot
+            , msgtarget = maybe [] c_channels config
             , server_hostname = ircHost
             , server_port = ircPort
             }
       forever $ sleepSeconds 1
     _ -> do
       programName <- pack <$> getProgName
-      hPutStrLn stderr $ "Usage: " <> programName <> " IRC-SERVER IRC-PORT CONFIG"
+      hPutStrLn stderr $
+        "Usage: " <> programName <> " IRC-SERVER IRC-PORT CONFIG"
       exitFailure
-
