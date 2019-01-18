@@ -8,29 +8,11 @@ import Data.Aeson
 import qualified Data.BloomFilter as Bloom (fromList)
 import Data.BloomFilter.Hash (cheapHashes)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile)
-import Data.Text (Text)
-import GHC.Generics (Generic)
-import Kirk.Config
-import Network.Socket (HostName, PortNumber)
 import Options.Applicative
 
 import Bot
 import Util
-
-data BrockmanConfig = BrockmanConfig
-  { c_bots :: [NewsBot]
-  , c_channels :: [Text]
-  } deriving (Generic)
-
-instance FromJSON BrockmanConfig where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
-
-data BrockmanOptions = BrockmanOptions
-  { ircHost :: HostName
-  , ircPort :: PortNumber
-  , configFile :: FilePath
-  , shortener :: Maybe String -- shortener URL
-  }
+import Types
 
 brockmanOptions :: Parser BrockmanOptions
 brockmanOptions = do
@@ -51,12 +33,12 @@ brockmanOptions = do
 
 main :: IO ()
 main = do
-  BrockmanOptions {..} <-
+  options <-
     execParser $
     info
       (helper <*> brockmanOptions)
       (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
-  config <- decode <$> LBS8.readFile configFile
+  config <- decode <$> LBS8.readFile (configFile options)
   let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
   bloom <- atomically $ newTVar bloom0
   forConcurrently_ (maybe [] c_bots config) $ \bot ->
@@ -64,11 +46,6 @@ main = do
     botThread
       bloom
       bot
-      shortener
-      Config
-        { nick = b_nick bot
-        , msgtarget = maybe [] c_channels config
-        , server_hostname = ircHost
-        , server_port = ircPort
-        }
+      config
+      options
   forever $ sleepSeconds 1

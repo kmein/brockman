@@ -9,7 +9,7 @@ cabal-version: >=1.10
 executable brockman
   hs-source-dirs: src
   main-is: Main.hs
-  other-modules: Bot, Feed, Util
+  other-modules: Bot, Feed, Types, Util
   build-depends:
     aeson,
     async,
