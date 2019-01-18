@@ -16,6 +16,7 @@ import Brockman.Util
 
 brockmanOptions :: Parser BrockmanOptions
 brockmanOptions = do
+  configFile <- strArgument (metavar "CONFIG-PATH" <> help "config file path")
   ircHost <- strArgument (metavar "IRC-HOST" <> help "IRC server address")
   ircPort <-
     option
@@ -23,7 +24,6 @@ brockmanOptions = do
       (long "port" <> short 'p' <> metavar "PORT" <> help "IRC server port" <>
        value 6667 <>
        showDefault)
-  configFile <- strArgument (metavar "CONFIG-PATH" <> help "config file path")
   shortener <-
     optional $
     strOption
