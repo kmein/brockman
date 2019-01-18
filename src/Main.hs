@@ -1,11 +1,9 @@
 {-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase,
-  OverloadedStrings, ScopedTypeVariables, TypeApplications,
+  OverloadedStrings, ScopedTypeVariables,
   ViewPatterns #-}
 
-import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async
 import Control.Concurrent.STM
-import Control.Exception (SomeException, handle)
 import Control.Monad (forM_, forever)
 import Data.Aeson
 import Data.BloomFilter (Bloom)
@@ -19,6 +17,8 @@ import qualified Data.Text as Text (unwords)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import Data.Text.IO (hPutStrLn)
 import GHC.Generics (Generic)
+import Kirk.Config
+import Kirk.Simple
 import Lens.Micro ((^.))
 import qualified Network.Wreq as Wreq (get, responseBody)
 import Safe (readMay)
@@ -30,8 +30,7 @@ import Text.Feed.Import (parseFeedString)
 import qualified Text.Feed.Types as Feed (Feed(..))
 import Text.RSS.Syntax (RSSItem(..), rssChannel, rssItems)
 
-import Kirk.Config
-import Kirk.Simple
+import Util
 
 data Item = Item
   { ni_title :: Text
@@ -95,12 +94,6 @@ botThread bloom bot botConfig =
           sleepSeconds (b_delay bot)
   where
     display (Item t l) = Text.unwords [t, l]
-
-eloop :: IO a -> IO a
-eloop = handle @SomeException =<< const
-
-sleepSeconds :: Int -> IO ()
-sleepSeconds n = threadDelay (n * 10 ^ 6)
 
 main :: IO ()
 main = do
