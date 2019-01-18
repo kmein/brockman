@@ -1,2 +1,2 @@
-ghc:
-  - "8.6.3"
+language: nix
+script: nix-build -A tarball shell.nix
