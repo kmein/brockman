@@ -36,7 +36,7 @@ botThread bloom bot botConfig =
   run botConfig $ \h -> do
     handshake botConfig h
     race_ (ircAgent botConfig h) $ do
-      hPutStrLn h $ "MODE " <> b_nick bot <> " +D"
+      mode botConfig h ["+D"]
       eloop $
         forever $
         forM_ (b_feeds bot) $ \url -> do
