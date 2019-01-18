@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase, OverloadedStrings #-}
-module Feed where
+module Brockman.Feed where
 
 import Data.Text (Text, pack)
 import qualified Text.Atom.Feed as Atom

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 
-module Bot where
+module Brockman.Bot where
 
 import Control.Concurrent.Async
 import Control.Concurrent.STM
@@ -18,9 +18,9 @@ import Lens.Micro ((^.))
 import qualified Network.Wreq as Wreq (get, post, responseBody)
 import Text.Feed.Import (parseFeedString)
 
-import Feed
-import Types
-import Util (eloop, sleepSeconds)
+import Brockman.Feed
+import Brockman.Types
+import Brockman.Util (eloop, sleepSeconds)
 
 botThread :: TVar (Bloom BS.ByteString) -> NewsBot -> Maybe BrockmanConfig -> BrockmanOptions -> IO ()
 botThread bloom bot config BrockmanOptions {..} =

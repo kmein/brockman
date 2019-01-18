@@ -1,4 +1,4 @@
-{-# LANGUAGE ApplicativeDo, DeriveGeneric, FlexibleContexts, OverloadedStrings,
+{-# LANGUAGE ApplicativeDo, FlexibleContexts, OverloadedStrings,
   RecordWildCards, ScopedTypeVariables #-}
 
 import Control.Concurrent.Async
@@ -10,9 +10,9 @@ import Data.BloomFilter.Hash (cheapHashes)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile)
 import Options.Applicative
 
-import Bot
-import Util
-import Types
+import Brockman.Bot
+import Brockman.Types
+import Brockman.Util
 
 brockmanOptions :: Parser BrockmanOptions
 brockmanOptions = do

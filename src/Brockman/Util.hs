@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
-module Util where
+module Brockman.Util where
 
 import Control.Exception (SomeException, handle)
 import Control.Concurrent (threadDelay)

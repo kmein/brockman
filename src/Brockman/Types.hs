@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
-module Types where
+module Brockman.Types where
 
 import Data.Aeson
 import Data.Text (Text)
