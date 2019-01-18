@@ -1,5 +1,5 @@
 name: brockman
-version: 1.0.3
+version: 1.1.0
 license: MIT
 author: lassulus <lassulus@lassul.us>, kmein <kieran.meinhardt@gmail.com>
 maintainer: kmein <kieran.meinhardt@gmail.com>
@@ -9,6 +9,7 @@ cabal-version: >=1.10
 executable brockman
   hs-source-dirs: src
   main-is: Main.hs
+  other-modules: Bot, Feed, Util
   build-depends:
     aeson,
     async,
@@ -18,7 +19,8 @@ executable brockman
     bytestring,
     feed,
     microlens,
-    safe,
+    network,
+    optparse-applicative,
     stm,
     text,
     wreq
