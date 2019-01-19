@@ -5,18 +5,18 @@ let
   inherit (nixpkgs) pkgs;
 
   f = { mkDerivation, aeson, async, base, bloomfilter, bytestring
-      , feed, kirk, microlens, network, optparse-applicative, stdenv, stm
-      , text, wreq
+      , feed, irc-client, microlens, network, optparse-applicative
+      , stdenv, stm, text, wreq
       }:
       mkDerivation {
         pname = "brockman";
-        version = "1.0.3";
+        version = "1.1.0";
         src = ./.;
         isLibrary = false;
         isExecutable = true;
         executableHaskellDepends = [
-          aeson async base bloomfilter bytestring feed kirk microlens network
-          optparse-applicative stm text wreq
+          aeson async base bloomfilter bytestring feed irc-client microlens
+          network optparse-applicative stm text wreq
         ];
         license = stdenv.lib.licenses.mit;
       };
@@ -27,9 +27,7 @@ let
 
   variant = if doBenchmark then pkgs.haskell.lib.doBenchmark else pkgs.lib.id;
 
-  drv = variant (haskellPackages.callPackage f {
-    kirk = haskellPackages.callPackage nix/kirk.nix {};
-  });
+  drv = variant (haskellPackages.callPackage f {});
 
 in
 
