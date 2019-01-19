@@ -5,6 +5,8 @@ import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Monad (forever)
 import Data.Aeson
+import Data.Maybe (fromMaybe)
+import Data.Default (def)
 import qualified Data.BloomFilter as Bloom (fromList)
 import Data.BloomFilter.Hash (cheapHashes)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile)
@@ -35,9 +37,10 @@ main = do
     info
       (helper <*> brockmanOptions)
       (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
-  config <- decode <$> LBS8.readFile (configFile options)
+  config@BotsConfig {..} <-
+    fromMaybe def . decode <$> LBS8.readFile (configFile options)
   let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
   bloom <- atomically $ newTVar bloom0
-  forConcurrently_ (maybe [] c_bots config) $ \bot ->
+  forConcurrently_ configBots $ \bot ->
     eloop $ botThread bloom bot config options
   forever $ sleepSeconds 1

@@ -3,26 +3,35 @@
 module Brockman.Types where
 
 import Data.Aeson
+import Data.Char (toLower, isLower)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Network.Socket (HostName, PortNumber)
+import Data.Default (Default(def))
 
 data NewsBot = NewsBot
-  { b_nick :: Text
-  , b_feeds :: [Text]
-  , b_delay :: Int
+  { botNick :: Text
+  , botFeeds :: [Text]
+  , botDelay :: Int
   } deriving (Generic)
 
 instance FromJSON NewsBot where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
+  parseJSON =
+    genericParseJSON
+      defaultOptions {fieldLabelModifier = map toLower . dropWhile isLower}
 
-data BrockmanConfig = BrockmanConfig
-  { c_bots :: [NewsBot]
-  , c_channels :: [Text]
+data BotsConfig = BotsConfig
+  { configBots :: [NewsBot]
+  , configChannels :: [Text]
   } deriving (Generic)
 
-instance FromJSON BrockmanConfig where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 2}
+instance FromJSON BotsConfig where
+  parseJSON =
+    genericParseJSON
+      defaultOptions {fieldLabelModifier = map toLower . dropWhile isLower}
+
+instance Default BotsConfig where
+  def = BotsConfig [] []
 
 data BrockmanOptions = BrockmanOptions
   { ircHost :: HostName

@@ -25,17 +25,17 @@ import Brockman.Util (sleepSeconds)
 botThread ::
      TVar (Bloom BS.ByteString)
   -> NewsBot
-  -> Maybe BrockmanConfig
+  -> BotsConfig
   -> BrockmanOptions
   -> IO ()
-botThread bloom bot config BrockmanOptions {..} =
+botThread bloom NewsBot{..} BotsConfig{..} BrockmanOptions {..} =
   let connectionC
         | useTLS = tlsConnection (WithDefaultConfig (BS8.pack ircHost) (fromIntegral ircPort)) & connectionSettings
         | otherwise = plainConnection (BS8.pack ircHost) (fromIntegral ircPort) & connectionSettings
         where connectionSettings = (flood .~ 0) . (logfunc .~ stdoutLogger)
       instanceC =
-        defaultInstanceConfig (b_nick bot) &
-        channels .~ maybe [] c_channels config &
+        defaultInstanceConfig botNick &
+        channels .~ configChannels &
         handlers .~
         [joinOnWelcome, pingHandler, deafenOnWelcome, broadcastOnJoin]
    in runClient connectionC instanceC ()
@@ -48,7 +48,7 @@ botThread bloom bot config BrockmanOptions {..} =
       EventHandler (matchWhen (const True)) $ \_ _ -> do
         instanceC <- snapshot instanceConfig =<< getIRCState
         forever $
-          forM_ (b_feeds bot) $ \url -> do
+          forM_ botFeeds $ \url -> do
             r <- liftIO $ Wreq.get $ unpack url
             let f = parseFeedString $ LBS8.unpack $ r ^. Wreq.responseBody
             items <- liftIO $ atomically $ deduplicate bloom $ feedToItems f
@@ -61,11 +61,11 @@ botThread bloom bot config BrockmanOptions {..} =
                   item
               forM_ (instanceC ^. channels) $ \channel ->
                 send $ Privmsg channel (Right (display item'))
-            liftIO $ sleepSeconds (b_delay bot)
+            liftIO $ sleepSeconds botDelay
       where
-        display item = Text.unwords [fi_title item, fi_link item]
+        display item = Text.unwords [itemTitle item, itemLink item]
 
 goify :: FeedItem -> IO FeedItem
 goify item = do
-  r <- Wreq.post "http://go.lassul.us" ["uri" Wreq.:= fi_link item]
-  pure item {fi_link = decodeUtf8 $ BL.toStrict $ r ^. Wreq.responseBody}
+  r <- Wreq.post "http://go.lassul.us" ["uri" Wreq.:= itemLink item]
+  pure item {itemLink = decodeUtf8 $ BL.toStrict $ r ^. Wreq.responseBody}

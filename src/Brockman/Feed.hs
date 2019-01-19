@@ -14,8 +14,8 @@ import qualified Text.Feed.Types as Feed (Feed(..))
 import Text.RSS.Syntax (RSSItem(..), rssChannel, rssItems)
 
 data FeedItem = FeedItem
-  { fi_title :: Text
-  , fi_link :: Text
+  { itemTitle :: Text
+  , itemLink :: Text
   } deriving (Show)
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
@@ -39,5 +39,5 @@ feedToItems =
 deduplicate :: TVar (Bloom BS.ByteString) -> [FeedItem] -> STM [FeedItem]
 deduplicate var items = do
   bloom <- readTVar var
-  writeTVar var $ Bloom.insertList (map (Text.encodeUtf8 . fi_link) items) bloom
-  return $ filter (flip Bloom.notElem bloom . Text.encodeUtf8 . fi_link) items
+  writeTVar var $ Bloom.insertList (map (Text.encodeUtf8 . itemLink) items) bloom
+  return $ filter (flip Bloom.notElem bloom . Text.encodeUtf8 . itemLink) items
