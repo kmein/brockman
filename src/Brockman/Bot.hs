@@ -29,9 +29,10 @@ botThread ::
   -> BrockmanOptions
   -> IO ()
 botThread bloom bot config BrockmanOptions {..} =
-  let connectionC =
-        plainConnection (BS8.pack ircHost) (fromIntegral ircPort) & flood .~ 0 &
-        logfunc .~ stdoutLogger
+  let connectionC
+        | useTLS = tlsConnection (WithDefaultConfig (BS8.pack ircHost) (fromIntegral ircPort)) & connectionSettings
+        | otherwise = plainConnection (BS8.pack ircHost) (fromIntegral ircPort) & connectionSettings
+        where connectionSettings = (flood .~ 0) . (logfunc .~ stdoutLogger)
       instanceC =
         defaultInstanceConfig (b_nick bot) &
         channels .~ maybe [] c_channels config &

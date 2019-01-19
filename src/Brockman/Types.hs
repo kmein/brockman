@@ -29,5 +29,5 @@ data BrockmanOptions = BrockmanOptions
   , ircPort :: PortNumber
   , configFile :: FilePath
   , shorten :: Bool
-  , useSSL :: Bool
+  , useTLS :: Bool
   }

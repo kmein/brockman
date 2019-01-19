@@ -25,7 +25,7 @@ brockmanOptions = do
        value 6667 <>
        showDefault)
   shorten <- switch (long "shorten" <> help "shorten links")
-  useSSL <- switch (long "ssl" <> help "use SSL")
+  useTLS <- switch (long "ssl" <> help "use TLS/SSL")
   pure BrockmanOptions {..}
 
 main :: IO ()
