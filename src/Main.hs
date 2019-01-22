@@ -18,16 +18,20 @@ import Brockman.Util
 
 brockmanOptions :: Parser BrockmanOptions
 brockmanOptions = do
-  configFile <- strArgument (metavar "CONFIG-PATH" <> help "config file path")
-  ircHost <- strArgument (metavar "IRC-HOST" <> help "IRC server address")
+  configFile <- strArgument $ metavar "CONFIG-PATH" <> help "config file path"
+  ircHost <- strArgument $ metavar "IRC-HOST" <> help "IRC server address"
   ircPort <-
-    option
-      auto
-      (long "port" <> short 'p' <> metavar "PORT" <> help "IRC server port" <>
-       value 6667 <>
-       showDefault)
-  shorten <- switch (long "shorten" <> help "shorten links")
-  useTLS <- switch (long "ssl" <> help "use TLS/SSL")
+    option auto $
+    long "port" <> short 'p' <> metavar "PORT" <> help "IRC server port" <>
+    value 6667 <>
+    showDefault
+  shortener <-
+    optional $
+    strOption $
+    long "shortener" <> metavar "URL" <> help "feed link shortener" <>
+    value "http://go" <>
+    showDefault
+  useTLS <- switch $ long "ssl" <> help "use TLS/SSL"
   pure BrockmanOptions {..}
 
 main :: IO ()

@@ -37,6 +37,6 @@ data BrockmanOptions = BrockmanOptions
   { ircHost :: HostName
   , ircPort :: PortNumber
   , configFile :: FilePath
-  , shorten :: Bool
+  , shortener :: Maybe HostName
   , useTLS :: Bool
   }
