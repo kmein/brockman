@@ -5,7 +5,7 @@ let
   inherit (nixpkgs) pkgs;
 
   f = { mkDerivation, aeson, async, base, bloomfilter, bytestring
-      , data-default, feed, irc-client, microlens, network
+      , feed, irc-client, microlens, microlens-mtl, network
       , optparse-applicative, stdenv, stm, text, wreq
       }:
       mkDerivation {
@@ -15,8 +15,8 @@ let
         isLibrary = false;
         isExecutable = true;
         executableHaskellDepends = [
-          aeson async base bloomfilter bytestring data-default feed
-          irc-client microlens network optparse-applicative stm text wreq
+          aeson async base bloomfilter bytestring feed irc-client microlens
+          microlens-mtl network optparse-applicative stm text wreq
         ];
         license = stdenv.lib.licenses.mit;
       };

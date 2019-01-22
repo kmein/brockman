@@ -1,42 +1,72 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase #-}
 
 module Brockman.Types where
 
 import Data.Aeson
-import Data.Char (toLower, isLower)
+import Data.Aeson.Types (Parser)
+import Data.Char (isLower, toLower)
 import Data.Text (Text)
-import GHC.Generics (Generic)
-import Network.Socket (HostName, PortNumber)
-import Data.Default (Default(def))
+import GHC.Generics (Generic, Rep)
+import Lens.Micro (Lens', lens)
 
-data NewsBot = NewsBot
+data BrockmanConfig = BrockmanConfig
+  { configBots :: [BotConfig]
+  , configChannels :: [Text]
+  , configUseTls :: Bool
+  , configIrc :: IRCConfig
+  , configShortener :: ShortenerConfig
+  , configController :: Text
+  } deriving (Generic)
+
+data ShortenerConfig = ShortenerConfig
+  { shortenerUse :: Bool
+  , shortenerUrl :: Text
+  } deriving (Generic)
+
+data IRCConfig = IrcConfig
+  { ircHost :: Text
+  , ircPort :: Int
+  } deriving (Generic)
+
+data BotConfig = BotConfig
   { botNick :: Text
   , botFeeds :: [Text]
   , botDelay :: Int
   } deriving (Generic)
 
-instance FromJSON NewsBot where
-  parseJSON =
-    genericParseJSON
-      defaultOptions {fieldLabelModifier = map toLower . dropWhile isLower}
+bNick :: Lens' BotConfig Text
+bNick = lens botNick $ \bot n -> bot {botNick = n}
 
-data BotsConfig = BotsConfig
-  { configBots :: [NewsBot]
-  , configChannels :: [Text]
-  } deriving (Generic)
+bFeeds :: Lens' BotConfig [Text]
+bFeeds = lens botFeeds $ \bot fs -> bot {botFeeds = fs}
 
-instance FromJSON BotsConfig where
-  parseJSON =
-    genericParseJSON
-      defaultOptions {fieldLabelModifier = map toLower . dropWhile isLower}
+bDelay :: Lens' BotConfig Int
+bDelay = lens botDelay $ \bot d -> bot {botDelay = d}
 
-instance Default BotsConfig where
-  def = BotsConfig [] []
+cBots :: Lens' BrockmanConfig [BotConfig]
+cBots = lens configBots $ \config bs -> config {configBots = bs}
 
-data BrockmanOptions = BrockmanOptions
-  { ircHost :: HostName
-  , ircPort :: PortNumber
-  , configFile :: FilePath
-  , shortener :: Maybe HostName
-  , useTLS :: Bool
-  }
+cChannels :: Lens' BrockmanConfig [Text]
+cChannels = lens configChannels $ \config cs -> config {configChannels = cs}
+
+myParseJson :: (Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
+myParseJson =
+  genericParseJSON
+    defaultOptions {fieldLabelModifier = uncapitalize . dropWhile isLower}
+  where
+    uncapitalize =
+      \case
+        [] -> []
+        (x:xs) -> toLower x : xs
+
+instance FromJSON BrockmanConfig where
+  parseJSON = myParseJson
+
+instance FromJSON BotConfig where
+  parseJSON = myParseJson
+
+instance FromJSON IRCConfig where
+  parseJSON = myParseJson
+
+instance FromJSON ShortenerConfig where
+  parseJSON = myParseJson

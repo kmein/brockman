@@ -1,36 +1,48 @@
 {
+  "irc": {
+    "host": "irc.r",
+    "port": 6667
+  },
+  "shortener": {
+    "use": true,
+    "url": "http://go"
+  },
+  "useTls": false,
+  "controller": "brockman",
   "channels": ["#news"],
-  "bots": [{
-    "nick": "achan",
-    "feeds": ["http://boards.4channel.org/a/index.rss"],
-    "delay": 1
-  }, {
-    "nick": "bchan",
-    "feeds": ["http://boards.4channel.org/b/index.rss"],
-    "delay": 2
-  }, {
-    "nick": "cchan",
-    "feeds": ["http://boards.4channel.org/c/index.rss"],
-    "delay": 2
-  }, {
-    "nick": "wchan",
-    "feeds": ["http://boards.4channel.org/w/index.rss"],
-    "delay": 2
-  }, {
-    "nick": "nchan",
-    "feeds": ["http://boards.4channel.org/n/index.rss"],
-    "delay": 2
-  }, {
-    "nick": "litchan",
-    "feeds": ["http://boards.4channel.org/lit/index.rss"],
-    "delay": 2
-  }, {
-    "nick": "xchan",
-    "feeds": ["http://boards.4channel.org/x/index.rss"],
-    "delay": 2
-  }, {
-    "nick": "fitchan",
-    "feeds": ["http://boards.4channel.org/fit/index.rss"],
-    "delay": 2
-  }]
+  "bots": [
+    {
+      "nick": "achan",
+      "feeds": ["http://boards.4channel.org/a/index.rss"],
+      "delay": 1
+    }, {
+      "nick": "bchan",
+      "feeds": ["http://boards.4channel.org/b/index.rss"],
+      "delay": 2
+    }, {
+      "nick": "cchan",
+      "feeds": ["http://boards.4channel.org/c/index.rss"],
+      "delay": 2
+    }, {
+      "nick": "wchan",
+      "feeds": ["http://boards.4channel.org/w/index.rss"],
+      "delay": 2
+    }, {
+      "nick": "nchan",
+      "feeds": ["http://boards.4channel.org/n/index.rss"],
+      "delay": 2
+    }, {
+      "nick": "litchan",
+      "feeds": ["http://boards.4channel.org/lit/index.rss"],
+      "delay": 2
+    }, {
+      "nick": "xchan",
+      "feeds": ["http://boards.4channel.org/x/index.rss"],
+      "delay": 2
+    }, {
+      "nick": "fitchan",
+      "feeds": ["http://boards.4channel.org/fit/index.rss"],
+      "delay": 2
+    }
+  ]
 }
