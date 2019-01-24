@@ -8,40 +8,50 @@
     "url": "http://go"
   },
   "useTls": false,
-  "controller": "brockman",
-  "channels": ["#news"],
+  "controller": {
+    "nick": "brockman",
+    "channels": ["#news"]
+  },
   "bots": [
     {
       "nick": "achan",
-      "feeds": ["http://boards.4channel.org/a/index.rss"],
+      "feed": "http://boards.4channel.org/a/index.rss",
+      "channels": ["#news"],
       "delay": 1
     }, {
       "nick": "bchan",
-      "feeds": ["http://boards.4channel.org/b/index.rss"],
+      "feed": "http://boards.4channel.org/b/index.rss",
+      "channels": ["#news"],
       "delay": 2
     }, {
       "nick": "cchan",
-      "feeds": ["http://boards.4channel.org/c/index.rss"],
+      "feed": "http://boards.4channel.org/c/index.rss",
+      "channels": ["#news"],
       "delay": 2
     }, {
       "nick": "wchan",
-      "feeds": ["http://boards.4channel.org/w/index.rss"],
+      "feed": "http://boards.4channel.org/w/index.rss",
+      "channels": ["#news"],
       "delay": 2
     }, {
       "nick": "nchan",
-      "feeds": ["http://boards.4channel.org/n/index.rss"],
+      "feed": "http://boards.4channel.org/n/index.rss",
+      "channels": ["#news"],
       "delay": 2
     }, {
       "nick": "litchan",
-      "feeds": ["http://boards.4channel.org/lit/index.rss"],
+      "feed": "http://boards.4channel.org/lit/index.rss",
+      "channels": ["#news"],
       "delay": 2
     }, {
       "nick": "xchan",
-      "feeds": ["http://boards.4channel.org/x/index.rss"],
+      "feed": "http://boards.4channel.org/x/index.rss",
+      "channels": ["#news"],
       "delay": 2
     }, {
       "nick": "fitchan",
-      "feeds": ["http://boards.4channel.org/fit/index.rss"],
+      "feed": "http://boards.4channel.org/fit/index.rss",
+      "channels": ["#news"],
       "delay": 2
     }
   ]

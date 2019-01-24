@@ -13,7 +13,7 @@ import System.IO (hPutStrLn, stderr)
 
 import Brockman.Bot
 import Brockman.Types
-import Brockman.Util
+import Brockman.Util (sleepSeconds)
 
 brockmanOptions :: Parser FilePath
 brockmanOptions = strArgument $ metavar "CONFIG-PATH" <> help "config file path"
@@ -27,10 +27,12 @@ main = do
       (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
   configJSON <- LBS8.readFile configFile
   case eitherDecode configJSON of
-    Right config@BrockmanConfig{..} -> do
+    Right config@BrockmanConfig {..} -> do
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- atomically $ newTVar bloom0
-      forConcurrently_ configBots $ \bot ->
-        eloop $ runNewsBot bloom bot config
+      runControllerBot bloom config `race_`
+        forConcurrently_
+          configBots
+          (\bot -> runNewsBot bloom bot config)
       forever $ sleepSeconds 1
     Left err -> hPutStrLn stderr err

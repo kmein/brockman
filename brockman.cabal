@@ -22,6 +22,7 @@ executable brockman
     microlens-mtl,
     network,
     optparse-applicative,
+    pcre-heavy,
     stm,
     text,
     wreq

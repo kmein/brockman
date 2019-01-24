@@ -1,26 +1,39 @@
 {-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase #-}
 
-module Brockman.Types where
+module Brockman.Types
+  ( BrockmanConfig(..)
+  , BotConfig(..)
+  , ControllerConfig(..)
+  , ShortenerConfig(..)
+  , IRCConfig(..)
+  , cBots
+  , bFeed
+  , bDelay
+  , bChannels
+  ) where
 
 import Data.Aeson
-import Data.Aeson.Types (Parser)
 import Data.Char (isLower, toLower)
 import Data.Text (Text)
-import GHC.Generics (Generic, Rep)
+import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: [BotConfig]
-  , configChannels :: [Text]
   , configUseTls :: Bool
   , configIrc :: IRCConfig
   , configShortener :: ShortenerConfig
-  , configController :: Text
+  , configController :: ControllerConfig
   } deriving (Generic)
 
 data ShortenerConfig = ShortenerConfig
   { shortenerUse :: Bool
   , shortenerUrl :: Text
+  } deriving (Generic)
+
+data ControllerConfig = ControllerConfig
+  { controllerNick :: Text
+  , controllerChannels :: [Text]
   } deriving (Generic)
 
 data IRCConfig = IrcConfig
@@ -30,15 +43,13 @@ data IRCConfig = IrcConfig
 
 data BotConfig = BotConfig
   { botNick :: Text
-  , botFeeds :: [Text]
+  , botFeed :: Text
+  , botChannels :: [Text]
   , botDelay :: Int
   } deriving (Generic)
 
-bNick :: Lens' BotConfig Text
-bNick = lens botNick $ \bot n -> bot {botNick = n}
-
-bFeeds :: Lens' BotConfig [Text]
-bFeeds = lens botFeeds $ \bot fs -> bot {botFeeds = fs}
+bFeed :: Lens' BotConfig Text
+bFeed = lens botFeed $ \bot fs -> bot {botFeed = fs}
 
 bDelay :: Lens' BotConfig Int
 bDelay = lens botDelay $ \bot d -> bot {botDelay = d}
@@ -46,13 +57,12 @@ bDelay = lens botDelay $ \bot d -> bot {botDelay = d}
 cBots :: Lens' BrockmanConfig [BotConfig]
 cBots = lens configBots $ \config bs -> config {configBots = bs}
 
-cChannels :: Lens' BrockmanConfig [Text]
-cChannels = lens configChannels $ \config cs -> config {configChannels = cs}
+bChannels :: Lens' BotConfig [Text]
+bChannels = lens botChannels $ \bot cs -> bot {botChannels = cs}
 
-myParseJson :: (Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
-myParseJson =
-  genericParseJSON
-    defaultOptions {fieldLabelModifier = uncapitalize . dropWhile isLower}
+myOptions :: Options
+myOptions =
+  defaultOptions {fieldLabelModifier = uncapitalize . dropWhile isLower}
   where
     uncapitalize =
       \case
@@ -60,13 +70,31 @@ myParseJson =
         (x:xs) -> toLower x : xs
 
 instance FromJSON BrockmanConfig where
-  parseJSON = myParseJson
+  parseJSON = genericParseJSON myOptions
 
 instance FromJSON BotConfig where
-  parseJSON = myParseJson
+  parseJSON = genericParseJSON myOptions
 
 instance FromJSON IRCConfig where
-  parseJSON = myParseJson
+  parseJSON = genericParseJSON myOptions
 
 instance FromJSON ShortenerConfig where
-  parseJSON = myParseJson
+  parseJSON = genericParseJSON myOptions
+
+instance FromJSON ControllerConfig where
+  parseJSON = genericParseJSON myOptions
+
+instance ToJSON BrockmanConfig where
+  toJSON = genericToJSON myOptions
+
+instance ToJSON BotConfig where
+  toJSON = genericToJSON myOptions
+
+instance ToJSON IRCConfig where
+  toJSON = genericToJSON myOptions
+
+instance ToJSON ShortenerConfig where
+  toJSON = genericToJSON myOptions
+
+instance ToJSON ControllerConfig where
+  toJSON = genericToJSON myOptions

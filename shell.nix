@@ -6,7 +6,7 @@ let
 
   f = { mkDerivation, aeson, async, base, bloomfilter, bytestring
       , feed, irc-client, microlens, microlens-mtl, network
-      , optparse-applicative, stdenv, stm, text, wreq
+      , optparse-applicative, pcre-heavy, stdenv, stm, text, wreq
       }:
       mkDerivation {
         pname = "brockman";
@@ -16,7 +16,7 @@ let
         isExecutable = true;
         executableHaskellDepends = [
           aeson async base bloomfilter bytestring feed irc-client microlens
-          microlens-mtl network optparse-applicative stm text wreq
+          microlens-mtl network optparse-applicative pcre-heavy stm text wreq
         ];
         license = stdenv.lib.licenses.mit;
       };
