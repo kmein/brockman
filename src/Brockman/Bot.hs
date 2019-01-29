@@ -95,7 +95,6 @@ runNewsBot bloom botConfig@BotConfig {..} config@BrockmanConfig {configShortener
       where
         display item = Data.Text.unwords [itemTitle item, itemLink item]
         loop cs isFirstTime = do
-          liftIO $ debug $ "News bot loop: isFirstTime=" <> show isFirstTime
           r <- liftIO $ get $ unpack botFeed
           liftIO $ debug $ "Requested " <> show botFeed
           items <-

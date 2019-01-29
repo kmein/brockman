@@ -9,6 +9,7 @@ import qualified Data.BloomFilter as Bloom (fromList)
 import Data.BloomFilter.Hash (cheapHashes)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile)
 import Options.Applicative
+import System.IO (hSetBuffering, stderr, BufferMode(LineBuffering))
 
 import Brockman.Bot
 import Brockman.Types
@@ -19,6 +20,7 @@ brockmanOptions = strArgument $ metavar "CONFIG-PATH" <> help "config file path"
 
 main :: IO ()
 main = do
+  hSetBuffering stderr LineBuffering
   configFile <-
     execParser $
     info
