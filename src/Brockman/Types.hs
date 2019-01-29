@@ -24,29 +24,29 @@ data BrockmanConfig = BrockmanConfig
   , configIrc :: IRCConfig
   , configShortener :: ShortenerConfig
   , configController :: ControllerConfig
-  } deriving (Generic)
+  } deriving (Generic, Show)
 
 data ShortenerConfig = ShortenerConfig
   { shortenerUse :: Bool
   , shortenerUrl :: Text
-  } deriving (Generic)
+  } deriving (Generic, Show)
 
 data ControllerConfig = ControllerConfig
   { controllerNick :: Text
   , controllerChannels :: [Text]
-  } deriving (Generic)
+  } deriving (Generic, Show)
 
 data IRCConfig = IrcConfig
   { ircHost :: Text
   , ircPort :: Int
-  } deriving (Generic)
+  } deriving (Generic, Show)
 
 data BotConfig = BotConfig
   { botNick :: Text
   , botFeed :: Text
   , botChannels :: [Text]
   , botDelay :: Int
-  } deriving (Generic)
+  } deriving (Generic, Show)
 
 bFeed :: Lens' BotConfig Text
 bFeed = lens botFeed $ \bot fs -> bot {botFeed = fs}

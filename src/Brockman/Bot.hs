@@ -25,7 +25,7 @@ import Text.Feed.Import (parseFeedString)
 
 import Brockman.Feed
 import Brockman.Types
-import Brockman.Util (eloop, sleepSeconds)
+import Brockman.Util (eloop, debug, sleepSeconds)
 
 runControllerBot :: TVar (Bloom BS.ByteString) -> BrockmanConfig -> IO ()
 runControllerBot bloom config@BrockmanConfig {..} =
@@ -34,32 +34,36 @@ runControllerBot bloom config@BrockmanConfig {..} =
         defaultInstanceConfig (controllerNick configController) &
         channels .~ controllerChannels configController &
         handlers .~ [joinOnWelcome, onPrivateMessage]
-   in eloop $ runClient connectionC instanceC config
+   in do
+      debug "Starting controller bot"
+      eloop $ runClient connectionC instanceC config
   where
     onPrivateMessage =
       EventHandler (matchType _Privmsg) $ \_ (_, m) ->
         case m of
           Left _ -> return ()
           Right message ->
-            when (controllerNick configController `isPrefixOf` message) $
-            case () of
-              ()
-                | [newNick, newFeed] <-
-                   parseCommand
-                     "add ([A-Za-z][A-Za-z0-9[\\\\\\]^_`{|}-]*) (https?://.*)"
-                     message -> do
-                  let newBot =
-                        BotConfig
-                          { botNick = newNick
-                          , botFeed = newFeed
-                          , botDelay = 1
-                          , botChannels = controllerChannels configController
-                          }
-                  cBots %= (newBot :)
-                  liftIO $ forkIO $ void $ runNewsBot bloom newBot config
-                | otherwise ->
-                  forM_ (controllerChannels configController) $ \channel ->
-                    send $ Privmsg channel (Right ("no comprendo: " <> message))
+            when (controllerNick configController `isPrefixOf` message) $ do
+              liftIO $ debug $ "Controller got a message: " <> show message
+              case () of
+                ()
+                  | [newNick, newFeed] <-
+                     parseCommand
+                       "add ([A-Za-z][A-Za-z0-9[\\\\\\]^_`{|}-]*) (https?://.*)"
+                       message -> do
+                    let newBot =
+                          BotConfig
+                            { botNick = newNick
+                            , botFeed = newFeed
+                            , botDelay = 1
+                            , botChannels = controllerChannels configController
+                            }
+                    liftIO $ debug $ "Controller spawning new bot: " <> show newBot
+                    cBots %= (newBot :)
+                    void $ liftIO $ forkIO $ runNewsBot bloom newBot config
+                  | otherwise ->
+                    forM_ (controllerChannels configController) $ \channel ->
+                      send $ Privmsg channel (Right ("no comprendo: " <> message))
 
 parseCommand :: Text -> Text -> [Text]
 parseCommand regex s =
@@ -72,23 +76,28 @@ parseCommand regex s =
       Regex.scan <$> Regex.compileM (encodeUtf8 regex) [] <*> pure s
 
 runNewsBot :: TVar (Bloom BS.ByteString) -> BotConfig -> BrockmanConfig -> IO ()
-runNewsBot bloom BotConfig {..} config@BrockmanConfig {configShortener} =
+runNewsBot bloom botConfig@BotConfig {..} config@BrockmanConfig {configShortener} =
   let connectionC = getConnectionConfig config
       instanceC =
         defaultInstanceConfig botNick & channels .~ botChannels &
         handlers .~ [joinOnWelcome, deafenOnWelcome, broadcastOnJoin, nickMangler]
-   in eloop $ runClient connectionC instanceC ()
+   in do
+      debug $ "Starting news bot: " <> show botConfig
+      eloop $ runClient connectionC instanceC ()
   where
     deafenOnWelcome =
       EventHandler (matchNumeric 001) $ \_ _ -> do
         instanceC <- snapshot instanceConfig =<< getIRCState
+        liftIO $ debug $ "Deafened bot: " <> show botConfig
         send $ Mode (instanceC ^. nick) False [] ["+D"]
     broadcastOnJoin =
       EventHandler (matchWhen (const True)) $ \_ _ -> loop botChannels True
       where
         display item = Data.Text.unwords [itemTitle item, itemLink item]
         loop cs isFirstTime = do
+          liftIO $ debug $ "News bot loop: isFirstTime=" <> show isFirstTime
           r <- liftIO $ get $ unpack botFeed
+          liftIO $ debug $ "Requested " <> show botFeed
           items <-
             liftIO $
             atomically $
@@ -117,5 +126,6 @@ getConnectionConfig BrockmanConfig {..}
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
+  debug $ "Shortening " <> show item <> " with " <> show url
   r <- post url ["uri" := itemLink item]
   pure item {itemLink = decodeUtf8 $ BL.toStrict $ r ^. responseBody}
