@@ -20,7 +20,6 @@ import qualified Data.ByteString.Lazy          as BL
                                                 ( toStrict )
 import qualified Data.ByteString.Lazy.Char8    as LBS8
                                                 ( unpack )
-import           Data.IORef
 import           Data.Text                      ( Text
                                                 , unpack
                                                 , unwords
@@ -47,6 +46,9 @@ import           Brockman.Util                  ( eloop
 
 handshake :: BotConfig -> ConduitM () IRC.IrcMessage IO ()
 handshake BotConfig {..} = do
+  liftIO $ noticeM
+    "brockman.handshake"
+    ("Handshake of " <> show botNick <> ", joining " <> show botChannels)
   yield $ IRC.Nick $ encodeUtf8 botNick
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> botNick <> " * 0 :" <> botNick
   mapM_ (yield . IRC.Join . encodeUtf8) botChannels
@@ -57,6 +59,7 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
   runIRC config $ \mvar -> do
     handshake bot
     yield $ IRC.Mode (encodeUtf8 botNick) True ["D"] []
+    liftIO $ noticeM "brockman.botThread" ("Muted " <> show botNick)
     sendNews botChannels True mvar
  where
   display item = Data.Text.unwords [itemTitle item, itemLink item]
@@ -69,7 +72,7 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
     maybeServerName <- liftIO $ tryTakeMVar mvar
     maybe (pure ()) (yield . IRC.Pong) maybeServerName
     r <- liftIO $ eloop $ get $ unpack botFeed
-    liftIO $ infoM "brockman.botThread" $ "Fetched " <> show botFeed
+    liftIO $ debugM "brockman.botThread" $ show botFeed
     items <-
       liftIO
       $  atomically
@@ -83,6 +86,8 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
       item' <- liftIO $ if shortenerUse configShortener
         then item `shortenWith` unpack (shortenerUrl configShortener)
         else pure item
+      liftIO $ noticeM "brockman.botThread.sendNews"
+                       ("Sending " <> show (display item'))
       forM_ cs $ \channel ->
         yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display
           item'
@@ -105,17 +110,10 @@ runIRC BrockmanConfig {..} produce = do
     (consume mvar)
     (produce mvar)
  where
-  logMessage = \case
-    Just (Right (IRC.Event _ src msg)) -> liftIO $ infoM
-      "brockman.runIRC"
-      ("Got an event: " <> show src <> " - " <> show msg)
-    Just (Left raw) ->
-      liftIO $ infoM "brockman.runIRC" ("Got raw bytes: " <> show raw)
-    _ -> pure ()
   initialize = pure ()
   consume mvar = forever $ do
     maybeMessage <- await
-    logMessage maybeMessage
+    maybe (pure ()) (liftIO . debugM "brockman.runIRC" . show) maybeMessage
     case maybeMessage of
       Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ putMVar mvar s
       _ -> pure ()

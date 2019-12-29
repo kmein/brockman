@@ -10,15 +10,15 @@ import qualified Data.BloomFilter              as Bloom
 import           Data.BloomFilter.Hash          ( cheapHashes )
 import qualified Data.ByteString.Lazy.Char8    as LBS8
                                                 ( readFile )
+import           Data.Maybe                     ( fromMaybe )
 import           Options.Applicative
+import           System.Environment             ( lookupEnv )
 import           System.IO                      ( hSetBuffering
                                                 , stderr
                                                 , BufferMode(LineBuffering)
                                                 )
-import           System.Log.Formatter
-import           System.Log.Handler      hiding ( setLevel )
-import           System.Log.Handler.Simple
 import           System.Log.Logger
+import           Text.Read
 
 import           Brockman.Bot
 import           Brockman.Types
@@ -30,22 +30,18 @@ brockmanOptions =
 
 main :: IO ()
 main = do
-  updateGlobalLogger "brockman" (setLevel DEBUG)
-  -- h <-
-  --   flip setFormatter (simpleLogFormatter "$time [$prio] $msg")
-  --     <$> streamHandler stderr DEBUG
-  -- updateGlobalLogger "brockman" (setHandlers [h])
+  logLevelString <- lookupEnv "BROCKMAN_LOG_LEVEL"
+  let logLevel = fromMaybe NOTICE $ readMaybe =<< logLevelString
+  updateGlobalLogger "brockman" (setLevel logLevel)
 
   hSetBuffering stderr LineBuffering
   configFile <- execParser $ info
     (helper <*> brockmanOptions)
     (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
   configJSON <- LBS8.readFile configFile
-  debugM "brockman.main"
-         ("Read " <> show configJSON <> " from " <> show configFile)
   case eitherDecode configJSON of
     Right config@BrockmanConfig {..} -> do
-      infoM "brockman.main" ("Successfully parsed config: " <> show config)
+      debugM "brockman.main" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- atomically $ newTVar bloom0
       forConcurrently_ configBots (\bot -> botThread bloom bot config)
