@@ -1,1092 +1,1243 @@
 {
-  "channels": [
-    "#news"
-  ],
+  "irc": {
+    "host": "irc.r",
+    "port": 6667
+  },
+  "shortener": {
+    "use": true,
+    "url": "http://go"
+  },
+  "useTls": false,
+  "controller": {
+    "nick": "brockman",
+    "channels": [
+      "#news"
+    ]
+  },
   "bots": [
     {
       "nick": "aje",
-      "feeds": [
-        "http://www.aljazeera.com/Services/Rss/?PostingId=2007731105943979989"
-      ],
-      "delay": 5
+      "feed": "http://www.aljazeera.com/Services/Rss/?PostingId=2007731105943979989",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "allafrica",
-      "feeds": [
-        "http://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"
-      ],
-      "delay": 5
+      "feed": "http://allafrica.com/tools/headlines/rdf/latest/headlines.rdf",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "antirez",
-      "feeds": [
-        "http://antirez.com/rss"
-      ],
-      "delay": 5
+      "feed": "http://antirez.com/rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "archlinux",
-      "feeds": [
-        "http://www.archlinux.org/feeds/news/"
-      ],
-      "delay": 5
+      "feed": "http://www.archlinux.org/feeds/news/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "ars",
-      "feeds": [
-        "http://feeds.arstechnica.com/arstechnica/index?format=xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.arstechnica.com/arstechnica/index?format=xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "augustl",
-      "feeds": [
-        "http://augustl.com/atom.xml"
-      ],
-      "delay": 5
+      "feed": "http://augustl.com/atom.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "bbc",
-      "feeds": [
-        "http://feeds.bbci.co.uk/news/rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.bbci.co.uk/news/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "bdt_aktuelle_themen",
-      "feeds": [
-        "http://www.bundestag.de/blueprint/servlet/service/de/14154/asFeed/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.bundestag.de/blueprint/servlet/service/de/14154/asFeed/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "bdt_drucksachen",
-      "feeds": [
-        "http://www.bundestag.de/dip21rss/bundestag_drucksachen.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.bundestag.de/dip21rss/bundestag_drucksachen.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "bdt_plenarproto",
-      "feeds": [
-        "http://www.bundestag.de/rss_feeds/plenarprotokolle.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.bundestag.de/rss_feeds/plenarprotokolle.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "bdt_pressemitteilungen",
-      "feeds": [
-        "http://www.bundestag.de/blueprint/servlet/service/de/273112/asFeed/index.rss"
-      ],
-      "delay": 5
-    },
-    {
-      "nick": "bitcoinpakistan",
-      "feeds": [
-        "https://bitcoinspakistan.com/feed/"
-      ],
-      "delay": 5
+      "feed": "http://www.bundestag.de/blueprint/servlet/service/de/273112/asFeed/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "cancer",
-      "feeds": [
-        "http://feeds.feedburner.com/ncinewsreleases?format=xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.feedburner.com/ncinewsreleases?format=xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "carta",
-      "feeds": [
-        "http://feeds2.feedburner.com/carta-standard-rss"
-      ],
-      "delay": 5
+      "feed": "http://feeds2.feedburner.com/carta-standard-rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "catholic_news",
-      "feeds": [
-        "http://feeds.feedburner.com/catholicnewsagency/dailynews"
-      ],
-      "delay": 5
+      "feed": "http://feeds.feedburner.com/catholicnewsagency/dailynews",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "cbc_busi",
-      "feeds": [
-        "http://rss.cbc.ca/lineup/business.xml"
-      ],
-      "delay": 5
+      "feed": "http://rss.cbc.ca/lineup/business.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "cbc_offbeat",
-      "feeds": [
-        "http://www.cbc.ca/cmlink/rss-offbeat"
-      ],
-      "delay": 5
+      "feed": "http://www.cbc.ca/cmlink/rss-offbeat",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "cbc_pol",
-      "feeds": [
-        "http://rss.cbc.ca/lineup/politics.xml"
-      ],
-      "delay": 5
+      "feed": "http://rss.cbc.ca/lineup/politics.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "cbc_tech",
-      "feeds": [
-        "http://rss.cbc.ca/lineup/technology.xml"
-      ],
-      "delay": 5
+      "feed": "http://rss.cbc.ca/lineup/technology.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "cbc_top",
-      "feeds": [
-        "http://rss.cbc.ca/lineup/topstories.xml"
-      ],
-      "delay": 5
+      "feed": "http://rss.cbc.ca/lineup/topstories.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "ccc",
-      "feeds": [
-        "http://www.ccc.de/rss/updates.rdf"
-      ],
-      "delay": 5
+      "feed": "http://www.ccc.de/rss/updates.rdf",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "chan_biz",
-      "feeds": [
-        "http://boards.4chan.org/biz/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://boards.4chan.org/biz/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "chan_g",
-      "feeds": [
-        "http://boards.4chan.org/g/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://boards.4chan.org/g/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "chan_int",
-      "feeds": [
-        "http://boards.4chan.org/int/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://boards.4chan.org/int/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "chan_sci",
-      "feeds": [
-        "http://boards.4chan.org/sci/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://boards.4chan.org/sci/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "chan_x",
-      "feeds": [
-        "http://boards.4chan.org/x/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://boards.4chan.org/x/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "c",
-      "feeds": [
-        "http://www.tempolimit-lichtgeschwindigkeit.de/news.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.tempolimit-lichtgeschwindigkeit.de/news.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "cryptogon",
-      "feeds": [
-        "http://www.cryptogon.com/?feed=rss2"
-      ],
-      "delay": 5
+      "feed": "http://www.cryptogon.com/?feed=rss2",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "csm",
-      "feeds": [
-        "http://rss.csmonitor.com/feeds/csm"
-      ],
-      "delay": 5
+      "feed": "http://rss.csmonitor.com/feeds/csm",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "csm_world",
-      "feeds": [
-        "http://rss.csmonitor.com/feeds/world"
-      ],
-      "delay": 5
+      "feed": "http://rss.csmonitor.com/feeds/world",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "danisch",
-      "feeds": [
-        "http://www.danisch.de/blog/feed/"
-      ],
-      "delay": 5
+      "feed": "http://www.danisch.de/blog/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "dod",
-      "feeds": [
-        "http://www.defense.gov/news/afps2.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.defense.gov/news/afps2.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "dwn",
-      "feeds": [
-        "http://deutsche-wirtschafts-nachrichten.de/feed/customfeed/"
-      ],
-      "delay": 5
+      "feed": "http://deutsche-wirtschafts-nachrichten.de/feed/customfeed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "ecat",
-      "feeds": [
-        "http://ecat.com/feed"
-      ],
-      "delay": 5
+      "feed": "http://ecat.com/feed",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "eia_press",
-      "feeds": [
-        "http://www.eia.gov/rss/press_rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.eia.gov/rss/press_rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "eia_today",
-      "feeds": [
-        "http://www.eia.gov/rss/todayinenergy.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.eia.gov/rss/todayinenergy.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "embargowatch",
-      "feeds": [
-        "https://embargowatch.wordpress.com/feed/"
-      ],
-      "delay": 5
+      "feed": "https://embargowatch.wordpress.com/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "ethereum-comments",
-      "feeds": [
-        "http://blog.ethereum.org/comments/feed"
-      ],
-      "delay": 5
+      "feed": "http://blog.ethereum.org/comments/feed",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "ethereum",
-      "feeds": [
-        "http://blog.ethereum.org/feed"
-      ],
-      "delay": 5
+      "feed": "http://blog.ethereum.org/feed",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "europa_ric",
-      "feeds": [
-        "http://ec.europa.eu/research/infocentre/rss/infocentre-rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://ec.europa.eu/research/infocentre/rss/infocentre-rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "eu_survei",
-      "feeds": [
-        "http://www.eurosurveillance.org/public/RSSFeed/RSS.aspx"
-      ],
-      "delay": 5
+      "feed": "http://www.eurosurveillance.org/public/RSSFeed/RSS.aspx",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "exploitdb",
-      "feeds": [
-        "http://www.exploit-db.com/rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.exploit-db.com/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "fars",
-      "feeds": [
-        "http://www.farsnews.com/rss.php"
-      ],
-      "delay": 5
+      "feed": "http://www.farsnews.com/rss.php",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "faz_feui",
-      "feeds": [
-        "http://www.faz.net/rss/aktuell/feuilleton/"
-      ],
-      "delay": 5
+      "feed": "http://www.faz.net/rss/aktuell/feuilleton/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "faz_politik",
-      "feeds": [
-        "http://www.faz.net/rss/aktuell/politik/"
-      ],
-      "delay": 5
+      "feed": "http://www.faz.net/rss/aktuell/politik/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "faz_wirtschaft",
-      "feeds": [
-        "http://www.faz.net/rss/aktuell/wirtschaft/"
-      ],
-      "delay": 5
+      "feed": "http://www.faz.net/rss/aktuell/wirtschaft/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "fbi",
-      "feeds": [
-        "https://www.fbi.gov/news/rss.xml"
-      ],
-      "delay": 5
+      "feed": "https://www.fbi.gov/news/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "fedreserve",
-      "feeds": [
-        "http://www.federalreserve.gov/feeds/press_all.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.federalreserve.gov/feeds/press_all.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "fefe",
-      "feeds": [
-        "http://blog.fefe.de/rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://blog.fefe.de/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "forbes",
-      "feeds": [
-        "http://www.forbes.com/forbes/feed2/"
-      ],
-      "delay": 5
+      "feed": "http://www.forbes.com/forbes/feed2/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "forbes_realtime",
-      "feeds": [
-        "http://www.forbes.com/real-time/feed2/"
-      ],
-      "delay": 5
+      "feed": "http://www.forbes.com/real-time/feed2/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "fox",
-      "feeds": [
-        "http://feeds.foxnews.com/foxnews/latest"
-      ],
-      "delay": 5
+      "feed": "http://feeds.foxnews.com/foxnews/latest",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "geheimorganisation",
-      "feeds": [
-        "http://geheimorganisation.org/feed/"
-      ],
-      "delay": 5
+      "feed": "http://geheimorganisation.org/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "GerForPol",
-      "feeds": [
-        "http://www.german-foreign-policy.com/de/news/rss-2.0"
-      ],
-      "delay": 5
+      "feed": "http://www.german-foreign-policy.com/de/news/rss-2.0",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "gmanet",
-      "feeds": [
-        "http://www.gmanetwork.com/news/rss/news"
-      ],
-      "delay": 5
+      "feed": "http://www.gmanetwork.com/news/rss/news",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "golem",
-      "feeds": [
-        "http://rss.golem.de/rss.php"
-      ],
-      "delay": 5
+      "feed": "http://rss.golem.de/rss.php",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "google",
-      "feeds": [
-        "http://news.google.com/?output=rss"
-      ],
-      "delay": 5
+      "feed": "http://news.google.com/?output=rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "greenpeace",
-      "feeds": [
-        "http://feeds.feedburner.com/GreenpeaceNews"
-      ],
-      "delay": 5
+      "feed": "http://feeds.feedburner.com/GreenpeaceNews",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "guardian_uk",
-      "feeds": [
-        "http://feeds.theguardian.com/theguardian/uk-news/rss"
-      ],
-      "delay": 5
-    },
-    {
-      "nick": "gulli",
-      "feeds": [
-        "http://ticker.gulli.com/rss/"
-      ],
-      "delay": 5
+      "feed": "http://feeds.theguardian.com/theguardian/uk-news/rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "hackernews",
-      "feeds": [
-        "https://news.ycombinator.com/rss"
-      ],
-      "delay": 5
+      "feed": "https://news.ycombinator.com/rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "handelsblatt",
-      "feeds": [
-        "http://www.handelsblatt.com/contentexport/feed/schlagzeilen"
-      ],
-      "delay": 5
+      "feed": "http://www.handelsblatt.com/contentexport/feed/schlagzeilen",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "heise",
-      "feeds": [
-        "https://www.heise.de/newsticker/heise-atom.xml"
-      ],
-      "delay": 5
+      "feed": "https://www.heise.de/newsticker/heise-atom.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "hindu_business",
-      "feeds": [
-        "http://www.thehindubusinessline.com/?service=rss"
-      ],
-      "delay": 5
+      "feed": "http://www.thehindubusinessline.com/?service=rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "hindu",
-      "feeds": [
-        "http://www.thehindu.com/?service=rss"
-      ],
-      "delay": 5
+      "feed": "http://www.thehindu.com/?service=rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "ign",
-      "feeds": [
-        "http://feeds.ign.com/ign/all"
-      ],
-      "delay": 5
+      "feed": "http://feeds.ign.com/ign/all",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "independent",
-      "feeds": [
-        "http://www.independent.com/rss/headlines/"
-      ],
-      "delay": 5
+      "feed": "http://www.independent.com/rss/headlines/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "indymedia",
-      "feeds": [
-        "https://de.indymedia.org/rss.xml"
-      ],
-      "delay": 5
+      "feed": "https://de.indymedia.org/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "info_libera",
-      "feeds": [
-        "http://www.informationliberation.com/rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.informationliberation.com/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "klagen-gegen-rundfuckbeitrag",
-      "feeds": [
-        "http://klagen-gegen-rundfunkbeitrag.blogspot.com/feeds/posts/default"
-      ],
-      "delay": 5
+      "feed": "http://klagen-gegen-rundfunkbeitrag.blogspot.com/feeds/posts/default",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "korea_herald",
-      "feeds": [
-        "http://www.koreaherald.com/rss_xml.php"
-      ],
-      "delay": 5
+      "feed": "http://www.koreaherald.com/rss_xml.php",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "linuxinsider",
-      "feeds": [
-        "http://www.linuxinsider.com/perl/syndication/rssfull.pl"
-      ],
-      "delay": 5
+      "feed": "http://www.linuxinsider.com/perl/syndication/rssfull.pl",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "lisp",
-      "feeds": [
-        "http://planet.lisp.org/rss20.xml"
-      ],
-      "delay": 5
+      "feed": "http://planet.lisp.org/rss20.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "liveleak",
-      "feeds": [
-        "http://www.liveleak.com/rss"
-      ],
-      "delay": 5
+      "feed": "http://www.liveleak.com/rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "lolmythesis",
-      "feeds": [
-        "http://lolmythesis.com/rss"
-      ],
-      "delay": 5
+      "feed": "http://lolmythesis.com/rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "LtU",
-      "feeds": [
-        "http://lambda-the-ultimate.org/rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://lambda-the-ultimate.org/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "lukepalmer",
-      "feeds": [
-        "http://lukepalmer.wordpress.com/feed/"
-      ],
-      "delay": 5
+      "feed": "http://lukepalmer.wordpress.com/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "mit",
-      "feeds": [
-        "http://web.mit.edu/newsoffice/rss-feeds.feed?type=rss"
-      ],
-      "delay": 5
+      "feed": "http://web.mit.edu/newsoffice/rss-feeds.feed?type=rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "mongrel2_master",
-      "feeds": [
-        "https://github.com/zedshaw/mongrel2/commits/master.atom"
-      ],
-      "delay": 5
+      "feed": "https://github.com/zedshaw/mongrel2/commits/master.atom",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "nds",
-      "feeds": [
-        "http://www.nachdenkseiten.de/?feed=atom"
-      ],
-      "delay": 5
+      "feed": "http://www.nachdenkseiten.de/?feed=atom",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "netzpolitik",
-      "feeds": [
-        "https://netzpolitik.org/feed/"
-      ],
-      "delay": 5
+      "feed": "https://netzpolitik.org/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "newsbtc",
-      "feeds": [
-        "http://newsbtc.com/feed/"
-      ],
-      "delay": 5
+      "feed": "http://newsbtc.com/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "nnewsg",
-      "feeds": [
-        "http://www.net-news-global.net/rss/rssfeed.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.net-news-global.net/rss/rssfeed.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "npr_busi",
-      "feeds": [
-        "http://www.npr.org/rss/rss.php?id=1006"
-      ],
-      "delay": 5
+      "feed": "http://www.npr.org/rss/rss.php?id=1006",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "npr_headlines",
-      "feeds": [
-        "http://www.npr.org/rss/rss.php?id=1001"
-      ],
-      "delay": 5
+      "feed": "http://www.npr.org/rss/rss.php?id=1001",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "npr_pol",
-      "feeds": [
-        "http://www.npr.org/rss/rss.php?id=1012"
-      ],
-      "delay": 5
+      "feed": "http://www.npr.org/rss/rss.php?id=1012",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "npr_world",
-      "feeds": [
-        "http://www.npr.org/rss/rss.php?id=1004"
-      ],
-      "delay": 5
+      "feed": "http://www.npr.org/rss/rss.php?id=1004",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "nsa",
-      "feeds": [
-        "https://www.nsa.gov/rss.xml"
-      ],
-      "delay": 5
+      "feed": "https://www.nsa.gov/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "nytimes",
-      "feeds": [
-        "http://rss.nytimes.com/services/xml/rss/nyt/World.xml"
-      ],
-      "delay": 5
+      "feed": "http://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "painload",
-      "feeds": [
-        "https://github.com/krebs/painload/commits/master.atom"
-      ],
-      "delay": 5
+      "feed": "https://github.com/krebs/painload/commits/master.atom",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "phys",
-      "feeds": [
-        "http://phys.org/rss-feed/"
-      ],
-      "delay": 5
+      "feed": "http://phys.org/rss-feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "piraten",
-      "feeds": [
-        "https://www.piratenpartei.de/feed/"
-      ],
-      "delay": 5
+      "feed": "https://www.piratenpartei.de/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "polizei_berlin",
-      "feeds": [
-        "http://www.berlin.de/polizei/presse-fahndung/_rss_presse.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.berlin.de/polizei/presse-fahndung/_rss_presse.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "presse_polizei",
-      "feeds": [
-        "http://www.presseportal.de/rss/polizei.rss2"
-      ],
-      "delay": 5
+      "feed": "http://www.presseportal.de/rss/polizei.rss2",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "presseportal",
-      "feeds": [
-        "http://www.presseportal.de/rss/presseportal.rss2"
-      ],
-      "delay": 5
+      "feed": "http://www.presseportal.de/rss/presseportal.rss2",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "prisonplanet",
-      "feeds": [
-        "http://prisonplanet.com/feed.rss"
-      ],
-      "delay": 5
+      "feed": "http://prisonplanet.com/feed.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "rawstory",
-      "feeds": [
-        "http://www.rawstory.com/rs/feed/"
-      ],
-      "delay": 5
+      "feed": "http://www.rawstory.com/rs/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_4chan",
-      "feeds": [
-        "http://www.reddit.com/r/4chan/new/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/4chan/new/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_anticonsum",
-      "feeds": [
-        "http://www.reddit.com/r/Anticonsumption/new/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/Anticonsumption/new/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_btc",
-      "feeds": [
-        "http://www.reddit.com/r/Bitcoin/new/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/Bitcoin/new/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_consp",
-      "feeds": [
-        "http://reddit.com/r/conspiracy/.rss"
-      ],
-      "delay": 5
+      "feed": "http://reddit.com/r/conspiracy/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_haskell",
-      "feeds": [
-        "http://www.reddit.com/r/haskell/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/haskell/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_nix",
-      "feeds": [
-        "http://www.reddit.com/r/nixos/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/nixos/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_prog",
-      "feeds": [
-        "http://www.reddit.com/r/programming/new/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/programming/new/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_sci",
-      "feeds": [
-        "http://www.reddit.com/r/science/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/science/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_tech",
-      "feeds": [
-        "http://www.reddit.com/r/technology/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/technology/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_tpp",
-      "feeds": [
-        "http://www.reddit.com/r/twitchplayspokemon/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/twitchplayspokemon/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reddit_world",
-      "feeds": [
-        "http://www.reddit.com/r/worldnews/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/worldnews/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "r-ethereum",
-      "feeds": [
-        "http://www.reddit.com/r/ethereum/.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.reddit.com/r/ethereum/.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reuters",
-      "feeds": [
-        "http://feeds.reuters.com/Reuters/worldNews"
-      ],
-      "delay": 5
+      "feed": "http://feeds.reuters.com/Reuters/worldNews",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "reuters-odd",
-      "feeds": [
-        "http://feeds.reuters.com/reuters/oddlyEnoughNews?format=xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.reuters.com/reuters/oddlyEnoughNews?format=xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "rt",
-      "feeds": [
-        "http://rt.com/rss/news/"
-      ],
-      "delay": 5
+      "feed": "http://rt.com/rss/news/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "schallurauch",
-      "feeds": [
-        "http://feeds.feedburner.com/SchallUndRauch"
-      ],
-      "delay": 5
+      "feed": "http://feeds.feedburner.com/SchallUndRauch",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sciencemag",
-      "feeds": [
-        "http://news.sciencemag.org/rss/current.xml"
-      ],
-      "delay": 5
+      "feed": "http://news.sciencemag.org/rss/current.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "scmp",
-      "feeds": [
-        "http://www.scmp.com/rss/91/feed"
-      ],
-      "delay": 5
+      "feed": "http://www.scmp.com/rss/91/feed",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sec-db",
-      "feeds": [
-        "http://feeds.security-database.com/SecurityDatabaseToolsWatch"
-      ],
-      "delay": 5
+      "feed": "http://feeds.security-database.com/SecurityDatabaseToolsWatch",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "shackspace",
-      "feeds": [
-        "http://shackspace.de/atom.xml"
-      ],
-      "delay": 5
+      "feed": "http://shackspace.de/atom.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "shz_news",
-      "feeds": [
-        "http://www.shz.de/nachrichten/newsticker/rss"
-      ],
-      "delay": 5
+      "feed": "http://www.shz.de/nachrichten/newsticker/rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sky_busi",
-      "feeds": [
-        "http://feeds.skynews.com/feeds/rss/business.xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.skynews.com/feeds/rss/business.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sky_pol",
-      "feeds": [
-        "http://feeds.skynews.com/feeds/rss/politics.xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.skynews.com/feeds/rss/politics.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sky_strange",
-      "feeds": [
-        "http://feeds.skynews.com/feeds/rss/strange.xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.skynews.com/feeds/rss/strange.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sky_tech",
-      "feeds": [
-        "http://feeds.skynews.com/feeds/rss/technology.xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.skynews.com/feeds/rss/technology.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sky_world",
-      "feeds": [
-        "http://feeds.skynews.com/feeds/rss/world.xml"
-      ],
-      "delay": 5
+      "feed": "http://feeds.skynews.com/feeds/rss/world.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "slashdot",
-      "feeds": [
-        "http://rss.slashdot.org/Slashdot/slashdot"
-      ],
-      "delay": 5
+      "feed": "http://rss.slashdot.org/Slashdot/slashdot",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "slate",
-      "feeds": [
-        "http://feeds.slate.com/slate"
-      ],
-      "delay": 5
+      "feed": "http://feeds.slate.com/slate",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "spiegel_eil",
-      "feeds": [
-        "http://www.spiegel.de/schlagzeilen/eilmeldungen/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.spiegel.de/schlagzeilen/eilmeldungen/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "spiegel_top",
-      "feeds": [
-        "http://www.spiegel.de/schlagzeilen/tops/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://www.spiegel.de/schlagzeilen/tops/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "standardmedia_ke",
-      "feeds": [
-        "http://www.standardmedia.co.ke/rss/headlines.php"
-      ],
-      "delay": 5
+      "feed": "http://www.standardmedia.co.ke/rss/headlines.php",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "stern",
-      "feeds": [
-        "http://www.stern.de/feed/standard/all/"
-      ],
-      "delay": 5
+      "feed": "http://www.stern.de/feed/standard/all/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "stz",
-      "feeds": [
-        "http://www.stuttgarter-zeitung.de/rss/topthemen.rss.feed"
-      ],
-      "delay": 5
+      "feed": "http://www.stuttgarter-zeitung.de/rss/topthemen.rss.feed",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sz_politik",
-      "feeds": [
-        "http://rss.sueddeutsche.de/rss/Politik"
-      ],
-      "delay": 5
+      "feed": "http://rss.sueddeutsche.de/rss/Politik",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sz_wirtschaft",
-      "feeds": [
-        "http://rss.sueddeutsche.de/rss/Wirtschaft"
-      ],
-      "delay": 5
+      "feed": "http://rss.sueddeutsche.de/rss/Wirtschaft",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "sz_wissen",
-      "feeds": [
-        "http://rss.sueddeutsche.de/rss/Wissen"
-      ],
-      "delay": 5
+      "feed": "http://rss.sueddeutsche.de/rss/Wissen",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "tagesschau",
-      "feeds": [
-        "http://www.tagesschau.de/newsticker.rdf"
-      ],
-      "delay": 5
+      "feed": "http://www.tagesschau.de/newsticker.rdf",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "taz",
-      "feeds": [
-        "http://taz.de/Themen-des-Tages/!p15;rss/"
-      ],
-      "delay": 5
+      "feed": "http://taz.de/Themen-des-Tages/!p15;rss/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "telegraph",
-      "feeds": [
-        "http://www.telegraph.co.uk/rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.telegraph.co.uk/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "telepolis",
-      "feeds": [
-        "http://www.heise.de/tp/rss/news-atom.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.heise.de/tp/rss/news-atom.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "the_insider",
-      "feeds": [
-        "http://www.theinsider.org/rss/news/headlines-xml.asp"
-      ],
-      "delay": 5
+      "feed": "http://www.theinsider.org/rss/news/headlines-xml.asp",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "tigsource",
-      "feeds": [
-        "http://www.tigsource.com/feed/"
-      ],
-      "delay": 5
+      "feed": "http://www.tigsource.com/feed/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "tinc",
-      "feeds": [
-        "http://tinc-vpn.org/news/index.rss"
-      ],
-      "delay": 5
+      "feed": "http://tinc-vpn.org/news/index.rss",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "torr_bits",
-      "feeds": [
-        "http://feeds.feedburner.com/TorrentfreakBits"
-      ],
-      "delay": 5
+      "feed": "http://feeds.feedburner.com/TorrentfreakBits",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "torrentfreak",
-      "feeds": [
-        "http://feeds.feedburner.com/Torrentfreak"
-      ],
-      "delay": 5
+      "feed": "http://feeds.feedburner.com/Torrentfreak",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "torr_news",
-      "feeds": [
-        "http://feed.torrentfreak.com/Torrentfreak/"
-      ],
-      "delay": 5
+      "feed": "http://feed.torrentfreak.com/Torrentfreak/",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "travel_warnings",
-      "feeds": [
-        "http://feeds.travel.state.gov/ca/travelwarnings-alerts"
-      ],
-      "delay": 5
+      "feed": "http://feeds.travel.state.gov/ca/travelwarnings-alerts",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "un_afr",
-      "feeds": [
-        "http://www.un.org/apps/news/rss/rss_africa.asp"
-      ],
-      "delay": 5
+      "feed": "http://www.un.org/apps/news/rss/rss_africa.asp",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "un_am",
-      "feeds": [
-        "http://www.un.org/apps/news/rss/rss_americas.asp"
-      ],
-      "delay": 5
+      "feed": "http://www.un.org/apps/news/rss/rss_americas.asp",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "un_eu",
-      "feeds": [
-        "http://www.un.org/apps/news/rss/rss_europe.asp"
-      ],
-      "delay": 5
+      "feed": "http://www.un.org/apps/news/rss/rss_europe.asp",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "un_me",
-      "feeds": [
-        "http://www.un.org/apps/news/rss/rss_mideast.asp"
-      ],
-      "delay": 5
+      "feed": "http://www.un.org/apps/news/rss/rss_mideast.asp",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "un_pac",
-      "feeds": [
-        "http://www.un.org/apps/news/rss/rss_asiapac.asp"
-      ],
-      "delay": 5
+      "feed": "http://www.un.org/apps/news/rss/rss_asiapac.asp",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "un_top",
-      "feeds": [
-        "http://www.un.org/apps/news/rss/rss_top.asp"
-      ],
-      "delay": 5
+      "feed": "http://www.un.org/apps/news/rss/rss_top.asp",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "us_math_society",
-      "feeds": [
-        "http://www.ams.org/cgi-bin/content/news_items.cgi?rss=1"
-      ],
-      "delay": 5
+      "feed": "http://www.ams.org/cgi-bin/content/news_items.cgi?rss=1",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "vimperator",
-      "feeds": [
-        "https://sites.google.com/a/vimperator.org/www/blog/posts.xml"
-      ],
-      "delay": 5
+      "feed": "https://sites.google.com/a/vimperator.org/www/blog/posts.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "weechat",
-      "feeds": [
-        "http://dev.weechat.org/feed/atom"
-      ],
-      "delay": 5
+      "feed": "http://dev.weechat.org/feed/atom",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "xkcd",
-      "feeds": [
-        "https://xkcd.com/rss.xml"
-      ],
-      "delay": 5
+      "feed": "https://xkcd.com/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     },
     {
       "nick": "zdnet",
-      "feeds": [
-        "http://www.zdnet.com/news/rss.xml"
-      ],
-      "delay": 5
+      "feed": "http://www.zdnet.com/news/rss.xml",
+      "delay": 5,
+      "channels": [
+        "#news"
+      ]
     }
   ]
 }
