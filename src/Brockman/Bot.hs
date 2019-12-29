@@ -57,18 +57,18 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
   runIRC config $ \mvar -> do
     handshake bot
     yield $ IRC.Mode (encodeUtf8 botNick) True ["D"] []
-    loop botChannels True mvar
+    sendNews botChannels True mvar
  where
   display item = Data.Text.unwords [itemTitle item, itemLink item]
-  loop
+  sendNews
     :: [Text]
     -> Bool
     -> MVar (IRC.ServerName BS.ByteString)
     -> ConduitM () IRC.IrcMessage IO ()
-  loop cs isFirstTime mvar = do
+  sendNews cs isFirstTime mvar = do
     maybeServerName <- liftIO $ tryTakeMVar mvar
     maybe (pure ()) (yield . IRC.Pong) maybeServerName
-    r <- liftIO $ get $ unpack botFeed
+    r <- liftIO $ eloop $ get $ unpack botFeed
     liftIO $ infoM "brockman.botThread" $ "Fetched " <> show botFeed
     items <-
       liftIO
@@ -87,7 +87,7 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
         yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display
           item'
     liftIO $ sleepSeconds botDelay
-    loop cs False mvar
+    sendNews cs False mvar
 
 
 runIRC

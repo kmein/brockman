@@ -22,9 +22,7 @@ import           System.Log.Logger
 
 import           Brockman.Bot
 import           Brockman.Types
-import           Brockman.Util                  ( eloop
-                                                , sleepSeconds
-                                                )
+import           Brockman.Util                  ( sleepSeconds )
 
 brockmanOptions :: Parser FilePath
 brockmanOptions =
@@ -50,6 +48,6 @@ main = do
       infoM "brockman.main" ("Successfully parsed config: " <> show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- atomically $ newTVar bloom0
-      eloop $ forConcurrently_ configBots (\bot -> botThread bloom bot config)
+      forConcurrently_ configBots (\bot -> botThread bloom bot config)
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err
