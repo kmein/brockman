@@ -42,6 +42,7 @@ import           Brockman.Feed
 import           Brockman.Types
 import           Brockman.Util                  ( eloop
                                                 , sleepSeconds
+                                                , optionally
                                                 )
 
 handshake :: BotConfig -> ConduitM () IRC.IrcMessage IO ()
@@ -70,7 +71,7 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
     -> ConduitM () IRC.IrcMessage IO ()
   sendNews cs isFirstTime mvar = do
     maybeServerName <- liftIO $ tryTakeMVar mvar
-    maybe (pure ()) (yield . IRC.Pong) maybeServerName
+    optionally (yield . IRC.Pong) maybeServerName
     r <- liftIO $ eloop $ get $ unpack botFeed
     liftIO $ debugM "brockman.botThread" $ show botFeed
     items <-
@@ -113,7 +114,7 @@ runIRC BrockmanConfig {..} produce = do
   initialize = pure ()
   consume mvar = forever $ do
     maybeMessage <- await
-    maybe (pure ()) (liftIO . debugM "brockman.runIRC" . show) maybeMessage
+    optionally (liftIO . debugM "brockman.runIRC" . show) maybeMessage
     case maybeMessage of
       Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ putMVar mvar s
       _ -> pure ()

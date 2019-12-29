@@ -12,3 +12,6 @@ eloop = handle @SomeException =<< const
 
 sleepSeconds :: Int -> IO ()
 sleepSeconds n = threadDelay (n * 10 ^ 6)
+
+optionally :: Applicative f => (a -> f ()) -> Maybe a -> f ()
+optionally = maybe (pure ())
