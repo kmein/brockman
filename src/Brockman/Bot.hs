@@ -1,130 +1,128 @@
-{-# LANGUAGE NamedFieldPuns, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE LambdaCase, RecordWildCards, OverloadedStrings #-}
 
 module Brockman.Bot
-  ( runControllerBot
-  , runNewsBot
-  ) where
+  ( botThread
+  )
+where
 
-import Control.Concurrent (forkIO)
-import Control.Concurrent.STM
-import Control.Monad (forM_, unless, when, void)
-import Control.Monad.IO.Class (liftIO)
-import Data.BloomFilter (Bloom)
-import qualified Data.ByteString as BS (ByteString)
-import qualified Data.ByteString.Lazy as BL (toStrict)
-import qualified Data.ByteString.Lazy.Char8 as LBS8 (unpack)
-import Data.Text (Text, isPrefixOf, unpack, unwords)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Lens.Micro
-import Lens.Micro.Mtl
-import qualified Text.Regex.PCRE.Heavy as Regex
-import Network.IRC.Client hiding (get)
-import Network.Socket (HostName)
-import Network.Wreq (FormParam((:=)), get, post, responseBody)
-import Text.Feed.Import (parseFeedString)
+import           Data.Conduit
+import           Control.Concurrent.STM
+import           Control.Concurrent.MVar
+import           Control.Monad                  ( forM_
+                                                , unless
+                                                , forever
+                                                )
+import           Control.Monad.IO.Class         ( liftIO )
+import           Data.BloomFilter               ( Bloom )
+import qualified Data.ByteString               as BS
+                                                ( ByteString )
+import qualified Data.ByteString.Lazy          as BL
+                                                ( toStrict )
+import qualified Data.ByteString.Lazy.Char8    as LBS8
+                                                ( unpack )
+import           Data.IORef
+import           Data.Text                      ( Text
+                                                , unpack
+                                                , unwords
+                                                )
+import           Data.Text.Encoding             ( decodeUtf8
+                                                , encodeUtf8
+                                                )
+import           Lens.Micro
+import qualified Network.IRC.Conduit           as IRC
+import           Network.Socket                 ( HostName )
+import           Network.Wreq                   ( FormParam((:=))
+                                                , get
+                                                , post
+                                                , responseBody
+                                                )
+import           System.Log.Logger
+import           Text.Feed.Import               ( parseFeedString )
 
-import Brockman.Feed
-import Brockman.Types
-import Brockman.Util (eloop, debug, sleepSeconds)
+import           Brockman.Feed
+import           Brockman.Types
+import           Brockman.Util                  ( eloop
+                                                , sleepSeconds
+                                                )
 
-runControllerBot :: TVar (Bloom BS.ByteString) -> BrockmanConfig -> IO ()
-runControllerBot bloom config@BrockmanConfig {..} =
-  let connectionC = getConnectionConfig config
-      instanceC =
-        defaultInstanceConfig (controllerNick configController) &
-        channels .~ controllerChannels configController &
-        handlers .~ [joinOnWelcome, onPrivateMessage]
-   in do
-      debug "Starting controller bot"
-      eloop $ runClient connectionC instanceC config
-  where
-    onPrivateMessage =
-      EventHandler (matchType _Privmsg) $ \_ (_, m) ->
-        case m of
-          Left _ -> return ()
-          Right message ->
-            when (controllerNick configController `isPrefixOf` message) $ do
-              liftIO $ debug $ "Controller got a message: " <> show message
-              case () of
-                ()
-                  | [newNick, newFeed] <-
-                     parseCommand
-                       "add ([A-Za-z][A-Za-z0-9[\\\\\\]^_`{|}-]*) (https?://.*)"
-                       message -> do
-                    let newBot =
-                          BotConfig
-                            { botNick = newNick
-                            , botFeed = newFeed
-                            , botDelay = 1
-                            , botChannels = controllerChannels configController
-                            }
-                    liftIO $ debug $ "Controller spawning new bot: " <> show newBot
-                    cBots %= (newBot :)
-                    void $ liftIO $ forkIO $ runNewsBot bloom newBot config
-                  | otherwise ->
-                    forM_ (controllerChannels configController) $ \channel ->
-                      send $ Privmsg channel (Right ("no comprendo: " <> message))
+handshake :: BotConfig -> ConduitM () IRC.IrcMessage IO ()
+handshake BotConfig {..} = do
+  yield $ IRC.Nick $ encodeUtf8 botNick
+  yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> botNick <> " * 0 :" <> botNick
+  mapM_ (yield . IRC.Join . encodeUtf8) botChannels
+  -- maybe join channels separated by comma
 
-parseCommand :: Text -> Text -> [Text]
-parseCommand regex s =
-  if null result
-    then []
-    else snd (head result)
-  where
-    result =
-      either (const []) id $
-      Regex.scan <$> Regex.compileM (encodeUtf8 regex) [] <*> pure s
+botThread :: TVar (Bloom BS.ByteString) -> BotConfig -> BrockmanConfig -> IO ()
+botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
+  runIRC config $ \mvar -> do
+    handshake bot
+    yield $ IRC.Mode (encodeUtf8 botNick) True ["D"] []
+    loop botChannels True mvar
+ where
+  display item = Data.Text.unwords [itemTitle item, itemLink item]
+  loop
+    :: [Text]
+    -> Bool
+    -> MVar (IRC.ServerName BS.ByteString)
+    -> ConduitM () IRC.IrcMessage IO ()
+  loop cs isFirstTime mvar = do
+    maybeServerName <- liftIO $ tryTakeMVar mvar
+    maybe (pure ()) (yield . IRC.Pong) maybeServerName
+    r <- liftIO $ get $ unpack botFeed
+    liftIO $ infoM "brockman.botThread" $ "Fetched " <> show botFeed
+    items <-
+      liftIO
+      $  atomically
+      $  deduplicate bloom
+      $  feedToItems
+      $  parseFeedString
+      $  LBS8.unpack
+      $  r
+      ^. responseBody
+    unless isFirstTime $ forM_ items $ \item -> do
+      item' <- liftIO $ if shortenerUse configShortener
+        then item `shortenWith` unpack (shortenerUrl configShortener)
+        else pure item
+      forM_ cs $ \channel ->
+        yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display
+          item'
+    liftIO $ sleepSeconds botDelay
+    loop cs False mvar
 
-runNewsBot :: TVar (Bloom BS.ByteString) -> BotConfig -> BrockmanConfig -> IO ()
-runNewsBot bloom botConfig@BotConfig {..} config@BrockmanConfig {configShortener} =
-  let connectionC = getConnectionConfig config
-      instanceC =
-        defaultInstanceConfig botNick & channels .~ botChannels &
-        handlers .~ [joinOnWelcome, deafenOnWelcome, broadcastOnJoin, nickMangler]
-   in do
-      debug $ "Starting news bot: " <> show botConfig
-      eloop $ runClient connectionC instanceC ()
-  where
-    deafenOnWelcome =
-      EventHandler (matchNumeric 001) $ \_ _ -> do
-        instanceC <- snapshot instanceConfig =<< getIRCState
-        liftIO $ debug $ "Deafened bot: " <> show botConfig
-        send $ Mode (instanceC ^. nick) False [] ["+D"]
-    broadcastOnJoin =
-      EventHandler (matchWhen (const True)) $ \_ _ -> loop botChannels True
-      where
-        display item = Data.Text.unwords [itemTitle item, itemLink item]
-        loop cs isFirstTime = do
-          r <- liftIO $ get $ unpack botFeed
-          liftIO $ debug $ "Requested " <> show botFeed
-          items <-
-            liftIO $
-            atomically $
-            deduplicate bloom $
-            feedToItems $ parseFeedString $ LBS8.unpack $ r ^. responseBody
-          unless isFirstTime $
-            forM_ items $ \item -> do
-              item' <-
-                liftIO $
-                if shortenerUse configShortener
-                  then item `shortenWith` unpack (shortenerUrl configShortener)
-                  else pure item
-              forM_ cs $ \channel ->
-                send $ Privmsg channel (Right (display item'))
-          liftIO $ sleepSeconds botDelay
-          loop cs False
 
-getConnectionConfig :: BrockmanConfig -> ConnectionConfig s
-getConnectionConfig BrockmanConfig {..}
-  | configUseTls = tlsConnection (WithDefaultConfig iHost iPort) & connectionSettings
-  | otherwise = plainConnection iHost iPort & connectionSettings
-  where
-    iHost = encodeUtf8 $ ircHost configIrc
-    iPort = fromIntegral $ ircPort configIrc
-    connectionSettings = (flood .~ 0) . (logfunc .~ stdoutLogger)
+runIRC
+  :: BrockmanConfig
+  -> (  MVar (IRC.ServerName BS.ByteString)
+     -> ConduitM () IRC.IrcMessage IO ()
+     )
+  -> IO ()
+runIRC BrockmanConfig {..} produce = do
+  mvar <- newEmptyMVar
+  (if configUseTls then IRC.ircTLSClient else IRC.ircClient)
+    (ircPort configIrc)
+    (encodeUtf8 $ ircHost configIrc)
+    initialize
+    (consume mvar)
+    (produce mvar)
+ where
+  logMessage = \case
+    Just (Right (IRC.Event _ src msg)) -> liftIO $ infoM
+      "brockman.runIRC"
+      ("Got an event: " <> show src <> " - " <> show msg)
+    Just (Left raw) ->
+      liftIO $ infoM "brockman.runIRC" ("Got raw bytes: " <> show raw)
+    _ -> pure ()
+  initialize = pure ()
+  consume mvar = forever $ do
+    maybeMessage <- await
+    logMessage maybeMessage
+    case maybeMessage of
+      Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ putMVar mvar s
+      _ -> pure ()
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
-  debug $ "Shortening " <> show item <> " with " <> show url
+  infoM "brockman.shortenWith"
+        ("Shortening " <> show item <> " with " <> show url)
   r <- post url ["uri" := itemLink item]
-  pure item {itemLink = decodeUtf8 $ BL.toStrict $ r ^. responseBody}
+  pure item { itemLink = decodeUtf8 $ BL.toStrict $ r ^. responseBody }
