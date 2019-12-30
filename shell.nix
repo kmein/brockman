@@ -5,20 +5,18 @@ let
   inherit (nixpkgs) pkgs;
 
   f = { mkDerivation, aeson, async, base, bloomfilter, bytestring
-      , conduit, feed, hslogger, irc-conduit, microlens, microlens-mtl
-      , network, optparse-applicative, pcre-heavy, stdenv, stm, text
-      , wreq
+      , conduit, feed, hslogger, irc-conduit, microlens, network
+      , optparse-applicative, stdenv, stm, text, wreq
       }:
       mkDerivation {
         pname = "brockman";
-        version = "1.1.0";
+        version = "1.2.2";
         src = ./.;
         isLibrary = false;
         isExecutable = true;
         executableHaskellDepends = [
           aeson async base bloomfilter bytestring conduit feed hslogger
-          irc-conduit microlens microlens-mtl network optparse-applicative
-          pcre-heavy stm text wreq
+          irc-conduit microlens network optparse-applicative stm text wreq
         ];
         license = stdenv.lib.licenses.mit;
       };
