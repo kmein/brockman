@@ -39,13 +39,13 @@ data BotConfig = BotConfig
   { botNick :: Text
   , botFeed :: Text
   , botChannels :: [Text]
-  , botDelay :: Int
+  , botDelay :: Maybe Int
   } deriving (Generic, Show)
 
 bFeed :: Lens' BotConfig Text
 bFeed = lens botFeed $ \bot fs -> bot {botFeed = fs}
 
-bDelay :: Lens' BotConfig Int
+bDelay :: Lens' BotConfig (Maybe Int)
 bDelay = lens botDelay $ \bot d -> bot {botDelay = d}
 
 cBots :: Lens' BrockmanConfig [BotConfig]

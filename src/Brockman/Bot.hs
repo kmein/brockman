@@ -91,7 +91,7 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
       forM_ cs $ \channel ->
         yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display
           item'
-    liftIO $ sleepSeconds botDelay
+    liftIO $ sleepSeconds (fromMaybe 300 botDelay)
     sendNews cs False mvar
 
 
