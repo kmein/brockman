@@ -19,7 +19,7 @@ import Lens.Micro (Lens', lens)
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: [BotConfig]
-  , configUseTls :: Bool
+  , configUseTls :: Maybe Bool
   , configIrc :: IRCConfig
   , configShortener :: Maybe Text
   , configController :: ControllerConfig

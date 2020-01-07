@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 
 module Brockman.Bot
   ( botThread
@@ -20,6 +20,7 @@ import qualified Data.ByteString.Lazy          as BL
                                                 ( toStrict )
 import qualified Data.ByteString.Lazy.Char8    as LBS8
                                                 ( unpack )
+import           Data.Maybe                     ( fromMaybe )
 import           Data.Text                      ( Text
                                                 , unpack
                                                 , unwords
@@ -102,7 +103,7 @@ runIRC
   -> IO ()
 runIRC BrockmanConfig {..} produce = do
   mvar <- newEmptyMVar
-  (if configUseTls then IRC.ircTLSClient else IRC.ircClient)
+  (if fromMaybe False configUseTls then IRC.ircTLSClient else IRC.ircClient)
     (ircPort configIrc)
     (encodeUtf8 $ ircHost configIrc)
     initialize
