@@ -1,7 +1,7 @@
 { pkgs, lib, config, ... }:
 with lib;
 let
-  package = pkgs.haskellPackages.callPackage ../shell.nix {};
+  package = import ./default.nix {};
 
   cfg = config.services.brockman;
 in {
