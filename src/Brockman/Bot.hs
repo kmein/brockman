@@ -84,9 +84,7 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
       $  r
       ^. responseBody
     unless isFirstTime $ forM_ items $ \item -> do
-      item' <- liftIO $ if shortenerUse configShortener
-        then item `shortenWith` unpack (shortenerUrl configShortener)
-        else pure item
+      item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
       liftIO $ noticeM "brockman.botThread.sendNews"
                        ("Sending " <> show (display item'))
       forM_ cs $ \channel ->

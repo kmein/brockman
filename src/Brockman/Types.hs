@@ -4,7 +4,6 @@ module Brockman.Types
   ( BrockmanConfig(..)
   , BotConfig(..)
   , ControllerConfig(..)
-  , ShortenerConfig(..)
   , IRCConfig(..)
   , cBots
   , bFeed
@@ -22,13 +21,8 @@ data BrockmanConfig = BrockmanConfig
   { configBots :: [BotConfig]
   , configUseTls :: Bool
   , configIrc :: IRCConfig
-  , configShortener :: ShortenerConfig
+  , configShortener :: Maybe Text
   , configController :: ControllerConfig
-  } deriving (Generic, Show)
-
-data ShortenerConfig = ShortenerConfig
-  { shortenerUse :: Bool
-  , shortenerUrl :: Text
   } deriving (Generic, Show)
 
 data ControllerConfig = ControllerConfig
@@ -78,9 +72,6 @@ instance FromJSON BotConfig where
 instance FromJSON IRCConfig where
   parseJSON = genericParseJSON myOptions
 
-instance FromJSON ShortenerConfig where
-  parseJSON = genericParseJSON myOptions
-
 instance FromJSON ControllerConfig where
   parseJSON = genericParseJSON myOptions
 
@@ -91,9 +82,6 @@ instance ToJSON BotConfig where
   toJSON = genericToJSON myOptions
 
 instance ToJSON IRCConfig where
-  toJSON = genericToJSON myOptions
-
-instance ToJSON ShortenerConfig where
   toJSON = genericToJSON myOptions
 
 instance ToJSON ControllerConfig where
