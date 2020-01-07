@@ -23,7 +23,7 @@ in {
           ${cfg.package}/bin/brockman ${pkgs.writeText "brockman.json" (builtins.toJSON cfg.config)}
         '';
         User = config.users.extraUsers.brockman.name;
-        PrivateTemp = true;
+        PrivateTmp = true;
         RuntimeDirectory = "brockman";
         WorkingDirectory = "%t/brockman";
       };
