@@ -1,5 +1,5 @@
 name: brockman
-version: 1.3.0
+version: 1.4.0
 license: MIT
 author: lassulus <lassulus@lassul.us>, kmein <kieran.meinhardt@gmail.com>
 maintainer: kmein <kieran.meinhardt@gmail.com>
@@ -17,6 +17,7 @@ executable brockman
     bloomfilter,
     bytestring,
     conduit,
+    containers,
     feed,
     hslogger,
     irc-conduit,

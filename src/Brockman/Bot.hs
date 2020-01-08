@@ -46,30 +46,23 @@ import           Brockman.Util                  ( eloop
                                                 , optionally
                                                 )
 
-handshake :: BotConfig -> ConduitM () IRC.IrcMessage IO ()
-handshake BotConfig {..} = do
-  liftIO $ noticeM
-    "brockman.handshake"
-    ("Handshake of " <> show botNick <> ", joining " <> show botChannels)
-  yield $ IRC.Nick $ encodeUtf8 botNick
-  yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> botNick <> " * 0 :" <> botNick
+handshake :: Text -> BotConfig -> ConduitM () IRC.IrcMessage IO ()
+handshake nick BotConfig {..} = do
+  liftIO $ noticeM "brockman.handshake" ("Handshake of " <> show nick <> ", joining " <> show botChannels)
+  yield $ IRC.Nick $ encodeUtf8 nick
+  yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
   mapM_ (yield . IRC.Join . encodeUtf8) botChannels
   -- maybe join channels separated by comma
 
-botThread :: TVar (Bloom BS.ByteString) -> BotConfig -> BrockmanConfig -> IO ()
-botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
-  runIRC config $ \mvar -> do
-    handshake bot
-    yield $ IRC.Mode (encodeUtf8 botNick) True ["D"] []
-    liftIO $ noticeM "brockman.botThread" ("Muted " <> show botNick)
-    sendNews botChannels True mvar
+botThread :: TVar (Bloom BS.ByteString) -> Text -> BotConfig -> BrockmanConfig -> IO ()
+botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC config $ \mvar -> do
+  handshake nick bot
+  yield $ IRC.Mode (encodeUtf8 nick) True ["D"] []
+  liftIO $ noticeM "brockman.botThread" ("Muted " <> show nick)
+  sendNews botChannels True mvar
  where
   display item = Data.Text.unwords [itemTitle item, itemLink item]
-  sendNews
-    :: [Text]
-    -> Bool
-    -> MVar (IRC.ServerName BS.ByteString)
-    -> ConduitM () IRC.IrcMessage IO ()
+  sendNews :: [Text] -> Bool -> MVar (IRC.ServerName BS.ByteString) -> ConduitM () IRC.IrcMessage IO ()
   sendNews cs isFirstTime mvar = do
     maybeServerName <- liftIO $ tryTakeMVar mvar
     optionally (yield . IRC.Pong) maybeServerName
@@ -86,21 +79,13 @@ botThread bloom bot@BotConfig {..} config@BrockmanConfig {..} =
       ^. responseBody
     unless isFirstTime $ forM_ items $ \item -> do
       item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
-      liftIO $ noticeM "brockman.botThread.sendNews"
-                       ("Sending " <> show (display item'))
-      forM_ cs $ \channel ->
-        yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display
-          item'
+      liftIO $ noticeM "brockman.botThread.sendNews" ("Sending " <> show (display item'))
+      forM_ cs $ \channel -> yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
     liftIO $ sleepSeconds (fromMaybe 300 botDelay)
     sendNews cs False mvar
 
 
-runIRC
-  :: BrockmanConfig
-  -> (  MVar (IRC.ServerName BS.ByteString)
-     -> ConduitM () IRC.IrcMessage IO ()
-     )
-  -> IO ()
+runIRC :: BrockmanConfig -> (MVar (IRC.ServerName BS.ByteString) -> ConduitM () IRC.IrcMessage IO ()) -> IO ()
 runIRC BrockmanConfig {..} produce = do
   mvar <- newEmptyMVar
   (if fromMaybe False configUseTls then IRC.ircTLSClient else IRC.ircClient)
@@ -120,7 +105,6 @@ runIRC BrockmanConfig {..} produce = do
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
-  infoM "brockman.shortenWith"
-        ("Shortening " <> show item <> " with " <> show url)
+  infoM "brockman.shortenWith" ("Shortening " <> show item <> " with " <> show url)
   r <- post url ["uri" := itemLink item]
   pure item { itemLink = decodeUtf8 $ BL.toStrict $ r ^. responseBody }

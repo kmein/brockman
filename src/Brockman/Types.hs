@@ -5,20 +5,16 @@ module Brockman.Types
   , BotConfig(..)
   , ControllerConfig(..)
   , IRCConfig(..)
-  , cBots
-  , bFeed
-  , bDelay
-  , bChannels
   ) where
 
 import Data.Aeson
 import Data.Char (isLower, toLower)
+import Data.Map (Map)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
 
 data BrockmanConfig = BrockmanConfig
-  { configBots :: [BotConfig]
+  { configBots :: Map Text BotConfig
   , configUseTls :: Maybe Bool
   , configIrc :: IRCConfig
   , configShortener :: Maybe Text
@@ -36,23 +32,10 @@ data IRCConfig = IrcConfig
   } deriving (Generic, Show)
 
 data BotConfig = BotConfig
-  { botNick :: Text
-  , botFeed :: Text
+  { botFeed :: Text
   , botChannels :: [Text]
   , botDelay :: Maybe Int
   } deriving (Generic, Show)
-
-bFeed :: Lens' BotConfig Text
-bFeed = lens botFeed $ \bot fs -> bot {botFeed = fs}
-
-bDelay :: Lens' BotConfig (Maybe Int)
-bDelay = lens botDelay $ \bot d -> bot {botDelay = d}
-
-cBots :: Lens' BrockmanConfig [BotConfig]
-cBots = lens configBots $ \config bs -> config {configBots = bs}
-
-bChannels :: Lens' BotConfig [Text]
-bChannels = lens botChannels $ \bot cs -> bot {botChannels = cs}
 
 myOptions :: Options
 myOptions =
