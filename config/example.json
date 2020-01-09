@@ -3,56 +3,63 @@
     "host": "irc.r",
     "port": 6667
   },
-  "shortener": {
-    "use": true,
-    "url": "http://go"
-  },
-  "useTls": false,
-  "controller": {
-    "nick": "brockman",
-    "channels": ["#news"]
-  },
-  "bots": [
-    {
-      "nick": "achan",
+  "shortener": "http://go",
+  "bots": {
+    "achan": {
       "feed": "http://boards.4channel.org/a/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 1
-    }, {
-      "nick": "bchan",
+    },
+    "bchan": {
       "feed": "http://boards.4channel.org/b/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 2
-    }, {
-      "nick": "cchan",
+    },
+    "cchan": {
       "feed": "http://boards.4channel.org/c/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 2
-    }, {
-      "nick": "wchan",
+    },
+    "wchan": {
       "feed": "http://boards.4channel.org/w/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 2
-    }, {
-      "nick": "nchan",
+    },
+    "nchan": {
       "feed": "http://boards.4channel.org/n/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 2
-    }, {
-      "nick": "litchan",
+    },
+    "litchan": {
       "feed": "http://boards.4channel.org/lit/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 2
-    }, {
-      "nick": "xchan",
+    },
+    "xchan": {
       "feed": "http://boards.4channel.org/x/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 2
-    }, {
-      "nick": "fitchan",
+    },
+    "fitchan": {
       "feed": "http://boards.4channel.org/fit/index.rss",
-      "channels": ["#news"],
+      "channels": [
+        "#news"
+      ],
       "delay": 2
     }
-  ]
+  }
 }
