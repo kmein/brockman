@@ -89,7 +89,7 @@ runIRC :: BrockmanConfig -> (MVar (IRC.ServerName BS.ByteString) -> ConduitM () 
 runIRC BrockmanConfig {..} produce = do
   mvar <- newEmptyMVar
   (if fromMaybe False configUseTls then IRC.ircTLSClient else IRC.ircClient)
-    (ircPort configIrc)
+    (fromMaybe 6667 $ ircPort configIrc)
     (encodeUtf8 $ ircHost configIrc)
     initialize
     (consume mvar)

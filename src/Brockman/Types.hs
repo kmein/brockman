@@ -28,7 +28,7 @@ data ControllerConfig = ControllerConfig
 
 data IRCConfig = IrcConfig
   { ircHost :: Text
-  , ircPort :: Int
+  , ircPort :: Maybe Int
   } deriving (Generic, Show)
 
 data BotConfig = BotConfig
