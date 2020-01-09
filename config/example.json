@@ -1,7 +1,6 @@
 {
   "irc": {
-    "host": "irc.r",
-    "port": 6667
+    "host": "irc.r"
   },
   "shortener": "http://go",
   "bots": {
