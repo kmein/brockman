@@ -18,7 +18,7 @@ data BrockmanConfig = BrockmanConfig
   , configUseTls :: Maybe Bool
   , configIrc :: IRCConfig
   , configShortener :: Maybe Text
-  , configController :: ControllerConfig
+  , configController :: Maybe ControllerConfig
   } deriving (Generic, Show)
 
 data ControllerConfig = ControllerConfig
