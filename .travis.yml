@@ -1,2 +1,2 @@
 language: nix
-script: nix-build shell.nix
+script: nix-build nix/package.nix
