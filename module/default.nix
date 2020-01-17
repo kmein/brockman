@@ -1,7 +1,7 @@
 { pkgs, lib, config, ... }:
 with lib;
 let
-  package = import ./package.nix;
+  package = import ../.;
 
   cfg = config.services.brockman;
 in {
