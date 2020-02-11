@@ -5,27 +5,12 @@
   services.brockman = {
     enable = true;
     config = {
-      irc = {
-        host = "localhost";
-        port = 6667;
-      };
-      useTls = false;
-      controller = {
-        nick = "brockman";
+      irc.host = "localhost";
+      bots.bchan = {
+        feed = "http://boards.4channel.org/b/index.rss";
         channels = [ "#news" ];
+        delay = 2;
       };
-      shortener = {
-        use = false;
-        url = "";
-      };
-      bots = [
-        {
-          nick = "bchan";
-          feed = "http://boards.4channel.org/b/index.rss";
-          channels = [ "#news" ];
-          delay = 2;
-        }
-      ];
     };
   };
 
