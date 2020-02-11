@@ -23,10 +23,13 @@ import           Text.Read
 
 import           Brockman.Bot
 import           Brockman.Types
-import           Brockman.Util                  ( sleepSeconds )
+import           Brockman.Util                  ( eloop
+                                                , sleepSeconds
+                                                )
 
 brockmanOptions :: Parser FilePath
-brockmanOptions = strArgument $ metavar "CONFIG-PATH" <> help "config file path"
+brockmanOptions =
+  strArgument $ metavar "CONFIG-PATH" <> help "config file path"
 
 main :: IO ()
 main = do
@@ -35,14 +38,17 @@ main = do
   updateGlobalLogger "brockman" (setLevel logLevel)
 
   hSetBuffering stderr LineBuffering
-  configFile <- execParser
-    $ info (helper <*> brockmanOptions) (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
+  configFile <- execParser $ info
+    (helper <*> brockmanOptions)
+    (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
   configJSON <- LBS8.readFile configFile
   case eitherDecode configJSON of
     Right config@BrockmanConfig {..} -> do
       debugM "brockman.main" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- atomically $ newTVar bloom0
-      forConcurrently_ (toList configBots) (\(nick, bot) -> botThread bloom nick bot config)
+      eloop $ forConcurrently_
+        (toList configBots)
+        (\(nick, bot) -> botThread bloom nick bot config)
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err

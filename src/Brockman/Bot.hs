@@ -41,8 +41,7 @@ import           Text.Feed.Import               ( parseFeedString )
 
 import           Brockman.Feed
 import           Brockman.Types
-import           Brockman.Util                  ( eloop
-                                                , sleepSeconds
+import           Brockman.Util                  ( sleepSeconds
                                                 , optionally
                                                 )
 
@@ -66,7 +65,7 @@ botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC conf
   sendNews cs isFirstTime mvar = do
     maybeServerName <- liftIO $ tryTakeMVar mvar
     optionally (yield . IRC.Pong) maybeServerName
-    r <- liftIO $ eloop $ get $ unpack botFeed
+    r <- liftIO $ get $ unpack botFeed
     liftIO $ debugM "brockman.botThread" $ show botFeed
     items <-
       liftIO
