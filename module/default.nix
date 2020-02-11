@@ -17,7 +17,7 @@ in {
     systemd.services.brockman = {
       description = "RSS to IRC broadcaster";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network.target" ];
+      after = [ "network-online.target" ];
       serviceConfig = {
         Restart = "always";
         ExecStart = ''
