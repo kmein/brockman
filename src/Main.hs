@@ -47,8 +47,8 @@ main = do
       debugM "brockman.main" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- atomically $ newTVar bloom0
-      eloop $ forConcurrently_
+      forConcurrently_
         (toList configBots)
-        (\(nick, bot) -> botThread bloom nick bot config)
+        (\(nick, bot) -> eloop $ botThread bloom nick bot config)
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err
