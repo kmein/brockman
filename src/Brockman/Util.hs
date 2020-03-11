@@ -10,8 +10,8 @@ import           System.Log.Logger
 
 eloop :: IO a -> IO a
 eloop x = handle @SomeException
-  (\_ -> do
-    warningM "brockman" "Something failed. See you in 10 seconds."
+  (\ex -> do
+    warningM "brockman" (show ex)
     sleepSeconds 10
     x
   )
