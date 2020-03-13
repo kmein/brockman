@@ -16,7 +16,10 @@
 
   services.mingetty.autologinUser = "root";
   programs.bash.promptInit = ''
-    ${pkgs.epic5}/bin/epic5 -c '#news' listener localhost
+    ${pkgs.tmux}/bin/tmux new-session \
+      '${pkgs.epic5}/bin/epic5 -c "#news" listener localhost' \; \
+      split-window -v -p 60 \
+      'journalctl -fu brockman.service' \;
   '';
 
   services.charybdis = {
