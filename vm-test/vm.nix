@@ -9,10 +9,12 @@
       bots.bchan = {
         feed = "http://boards.4channel.org/b/index.rss";
         channels = [ "#news" ];
-        delay = 2;
+        delay = 500;
       };
     };
   };
+
+  systemd.services.brockman.environment.BROCKMAN_LOG_LEVEL = "DEBUG";
 
   services.mingetty.autologinUser = "root";
   programs.bash.promptInit = ''
@@ -61,7 +63,7 @@
       };
 
       class "users" {
-        ping_time = 2 minutes;
+        ping_time = 10 seconds;
         number_per_ident = 10;
         number_per_ip = 2048;
         number_per_ip_global = 4096;
