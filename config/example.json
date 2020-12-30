@@ -9,56 +9,56 @@
       "channels": [
         "#news"
       ],
-      "delay": 1
+      "delay": 60
     },
     "bchan": {
       "feed": "http://boards.4channel.org/b/index.rss",
       "channels": [
         "#news"
       ],
-      "delay": 2
+      "delay": 60
     },
     "cchan": {
       "feed": "http://boards.4channel.org/c/index.rss",
       "channels": [
         "#news"
       ],
-      "delay": 2
+      "delay": 60
     },
     "wchan": {
       "feed": "http://boards.4channel.org/w/index.rss",
       "channels": [
         "#news"
       ],
-      "delay": 2
+      "delay": 60
     },
     "nchan": {
       "feed": "http://boards.4channel.org/n/index.rss",
       "channels": [
         "#news"
       ],
-      "delay": 2
+      "delay": 60
     },
     "litchan": {
       "feed": "http://boards.4channel.org/lit/index.rss",
       "channels": [
         "#news"
       ],
-      "delay": 2
+      "delay": 60
     },
     "xchan": {
       "feed": "http://boards.4channel.org/x/index.rss",
       "channels": [
         "#news"
       ],
-      "delay": 2
+      "delay": 60
     },
     "fitchan": {
       "feed": "http://boards.4channel.org/fit/index.rss",
       "channels": [
         "#news"
       ],
-      "delay": 2
+      "delay": 60
     }
   }
 }
