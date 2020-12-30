@@ -12,6 +12,7 @@ import           Control.Concurrent.STM
 import           Control.Monad                  ( forM_
                                                 , unless
                                                 , forever
+                                                , when
                                                 )
 import           Control.Monad.IO.Class         ( liftIO )
 import           Data.BloomFilter               ( Bloom )
@@ -38,6 +39,7 @@ import           Network.Wreq                   ( FormParam((:=))
                                                 , responseBody
                                                 )
 import           System.Log.Logger
+import           System.Random                  ( randomRIO )
 import           Text.Feed.Import               ( parseFeedString )
 
 import           Brockman.Feed
@@ -47,8 +49,8 @@ import           Brockman.Util                  ( sleepSeconds
                                                 )
 
 handshake :: Text -> BotConfig -> ConduitM () IRC.IrcMessage IO ()
-handshake nick BotConfig {..} = do
-  liftIO $ noticeM "brockman.handshake" ("Handshake of " <> show nick <> ", joining " <> show botChannels)
+handshake nick bot@BotConfig {..} = do
+  liftIO $ noticeM "brockman.handshake" ("[" <> unpack botFeed <> "] Handshake as " <> show nick <> ", joining " <> show botChannels)
   yield $ IRC.Nick $ encodeUtf8 nick
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
   mapM_ (yield . IRC.Join . encodeUtf8) botChannels
@@ -68,21 +70,26 @@ botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC conf
       liftIO (tryTakeMVar pingedMVar) >>= \case
         Nothing -> pure ()
         Just serverName -> do
-          liftIO $ debugM "brockman.botThread.sendNews" ("Pong " <> show serverName)
+          liftIO $ debugM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Pong " <> show serverName)
           yield $ IRC.Pong serverName
       liftIO (tryTakeMVar feedMVar) >>= \case
         Nothing -> pure ()
         Just items ->
           forM_ items $ \item -> do
-            liftIO $ noticeM "brockman.botThread.sendNews" ("Sending " <> show (display item))
+            liftIO $ noticeM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Sending " <> show (display item))
             item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
             forM_ cs $ \channel -> yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
       liftIO $ sleepSeconds 1 -- dont heat the room
 
 feedThread :: BotConfig -> Bool -> TVar (Bloom BS.ByteString) -> MVar [FeedItem] -> IO ()
 feedThread bot@BotConfig {..} isFirstTime bloom feedMVar = do
+    let delaySeconds = fromMaybe 300 botDelay
+    liftIO $ when isFirstTime $ do
+      randomDelay <- randomRIO (0, delaySeconds)
+      debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] sleep " <> show randomDelay
+      sleepSeconds randomDelay
     r <- liftIO $ get $ unpack botFeed
-    liftIO $ debugM "brockman.feedThread" $ show botFeed
+    liftIO $ debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] fetch"
     items <-
       liftIO
       $  atomically
@@ -93,8 +100,8 @@ feedThread bot@BotConfig {..} isFirstTime bloom feedMVar = do
       $  r
       ^. responseBody
     unless isFirstTime $ putMVar feedMVar items
-    liftIO $ sleepSeconds (fromMaybe 300 botDelay)
-    liftIO $ noticeM "brockman.feedThread" "finished sleeping"
+    liftIO $ sleepSeconds delaySeconds
+    liftIO $ debugM "brockman.feedThread" ("[" <> unpack botFeed <> "] tick")
     feedThread bot False bloom feedMVar
 
 

@@ -24,6 +24,7 @@ executable brockman
     microlens,
     network,
     optparse-applicative,
+    random,
     stm,
     text,
     wreq
