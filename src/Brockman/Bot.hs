@@ -40,7 +40,7 @@ import           Network.Wreq                   ( FormParam((:=))
                                                 )
 import           System.Log.Logger
 import           System.Random                  ( randomRIO )
-import           Text.Feed.Import               ( parseFeedString )
+import           Text.Feed.Import               ( parseFeedSource )
 
 import           Brockman.Feed
 import           Brockman.Types
@@ -95,8 +95,7 @@ feedThread bot@BotConfig {..} isFirstTime bloom feedMVar = do
       $  atomically
       $  deduplicate bloom
       $  feedToItems
-      $  parseFeedString
-      $  LBS8.unpack
+      $  parseFeedSource
       $  r
       ^. responseBody
     unless isFirstTime $ putMVar feedMVar items
