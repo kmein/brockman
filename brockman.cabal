@@ -20,6 +20,7 @@ executable brockman
     containers,
     feed,
     hslogger,
+    http-client,
     irc-conduit,
     microlens,
     network,

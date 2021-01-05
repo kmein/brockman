@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE LambdaCase, RankNTypes, RecordWildCards, OverloadedStrings #-}
 
 module Brockman.Bot
   ( botThread
@@ -22,19 +22,28 @@ import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy          as BL
                                                 ( toStrict )
 import           Data.Maybe                     ( fromMaybe )
-import           Data.Text                      ( Text
+import qualified Data.Text as T                 ( Text
+                                                , pack
                                                 , unpack
+                                                , words
+                                                , unwords
                                                 )
 import           Data.Text.Encoding             ( decodeUtf8
                                                 , encodeUtf8
                                                 )
 import           Lens.Micro
 import qualified Network.IRC.Conduit           as IRC
+import           Network.HTTP.Client            ( HttpExceptionContent(ConnectionFailure, StatusCodeException)
+                                                , HttpException(HttpExceptionRequest)
+                                                )
 import           Network.Socket                 ( HostName )
 import           Network.Wreq                   ( FormParam((:=))
                                                 , get
                                                 , post
                                                 , responseBody
+                                                , responseStatus
+                                                , statusCode
+                                                , statusMessage
                                                 )
 import           System.Random                  ( randomRIO )
 import           Text.Feed.Import               ( parseFeedSource )
@@ -47,9 +56,12 @@ import           Brockman.Util                  ( sleepSeconds
                                                 )
 
 
-data BrockmanMessage = Pinged (IRC.ServerName BS.ByteString) | NewFeedItem FeedItem
+data BrockmanMessage
+  = Pinged (IRC.ServerName BS.ByteString)
+  | NewFeedItem FeedItem
+  | Exception T.Text
 
-handshake :: Text -> BotConfig -> ConduitM () IRC.IrcMessage IO ()
+handshake :: T.Text -> BotConfig -> ConduitM () IRC.IrcMessage IO ()
 handshake nick BotConfig {..} = do
   notice botFeed ("handshake as " <> show nick <> ", joining " <> show botChannels)
   yield $ IRC.Nick $ encodeUtf8 nick
@@ -57,20 +69,23 @@ handshake nick BotConfig {..} = do
   mapM_ (yield . IRC.Join . encodeUtf8) botChannels
   -- maybe join channels separated by comma
 
-botThread :: TVar (Bloom BS.ByteString) -> Text -> BotConfig -> BrockmanConfig -> IO ()
+botThread :: TVar (Bloom BS.ByteString) -> T.Text -> BotConfig -> BrockmanConfig -> IO ()
 botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC config $ \chan -> do
   handshake nick bot
   _ <- liftIO $ forkIO $ feedThread bot True bloom chan
-  forever $ do
+  forever $
     liftIO (readChan chan) >>= \case
       Pinged serverName -> do
        debug botFeed ("pong " <> show serverName)
        yield $ IRC.Pong serverName
       NewFeedItem item -> do
-         item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
+         item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
          notice botFeed ("sending " <> show (display item'))
          forM_ botChannels $ \channel ->
             yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
+      Exception message ->
+        forM_ botChannels $ \channel ->
+          yield $ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
 
 
 feedThread :: BotConfig -> Bool -> TVar (Bloom BS.ByteString) -> Chan BrockmanMessage -> IO ()
@@ -80,11 +95,20 @@ feedThread bot@BotConfig {..} isFirstTime bloom chan = do
       randomDelay <- randomRIO (0, delaySeconds)
       debug botFeed ("sleep " <> show randomDelay)
       sleepSeconds randomDelay
-    r <- E.try $ get $ unpack botFeed
+    r <- E.try $ get $ T.unpack botFeed
     debug botFeed "fetch"
     case r of
-      Left (E.SomeException ex) -> do  -- TODO handle exceptions, print to irc
-        debug botFeed ("exception" <> show ex)
+      Left exception ->
+        let
+          mircRed text = "\ETX4,99" <> text <> "\ETX" -- ref https://www.mirc.com/colors.html
+          message = (<> " — " <> botFeed) $ mircRed $ T.unwords $ T.words $ case exception of
+            HttpExceptionRequest _ (StatusCodeException response _) ->
+              T.unwords [T.pack $ show $ response ^. responseStatus . statusCode, decodeUtf8 $ response ^. responseStatus . statusMessage]
+            HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
+            _ -> T.pack $ show exception
+         in do
+          debug botFeed ("exception" <> T.unpack message)
+          writeChan chan (Exception message)
       Right resp -> do
         items <-
           liftIO
