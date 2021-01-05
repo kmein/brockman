@@ -77,8 +77,8 @@ botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC conf
         Nothing -> pure ()
         Just items ->
           forM_ items $ \item -> do
-            liftIO $ noticeM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Sending " <> show (display item))
             item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
+            liftIO $ noticeM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Sending " <> show (display item'))
             forM_ cs $ \channel -> yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
       liftIO $ sleepSeconds 1 -- dont heat the room
 
