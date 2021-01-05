@@ -36,14 +36,14 @@ import           Network.Wreq                   ( FormParam((:=))
                                                 , post
                                                 , responseBody
                                                 )
-import           System.Log.Logger
 import           System.Random                  ( randomRIO )
 import           Text.Feed.Import               ( parseFeedSource )
 
 import           Brockman.Feed
 import           Brockman.Types
 import           Brockman.Util                  ( sleepSeconds
-                                                , optionally
+                                                , debug
+                                                , notice
                                                 )
 
 
@@ -51,7 +51,7 @@ data BrockmanMessage = Pinged (IRC.ServerName BS.ByteString) | NewFeedItem FeedI
 
 handshake :: Text -> BotConfig -> ConduitM () IRC.IrcMessage IO ()
 handshake nick BotConfig {..} = do
-  liftIO $ noticeM "brockman.handshake" ("[" <> unpack botFeed <> "] Handshake as " <> show nick <> ", joining " <> show botChannels)
+  notice botFeed ("handshake as " <> show nick <> ", joining " <> show botChannels)
   yield $ IRC.Nick $ encodeUtf8 nick
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
   mapM_ (yield . IRC.Join . encodeUtf8) botChannels
@@ -64,16 +64,13 @@ botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC conf
   forever $ do
     liftIO (readChan chan) >>= \case
       Pinged serverName -> do
-       liftIO $ debugM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Pong " <> show serverName)
+       debug botFeed ("pong " <> show serverName)
        yield $ IRC.Pong serverName
       NewFeedItem item -> do
          item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
-         liftIO $ noticeM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Sending " <> show (display item'))
+         notice botFeed ("sending " <> show (display item'))
          forM_ botChannels $ \channel ->
             yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
-    -- liftIO $ sleepSeconds tickSeconds -- dont heat the room
- where
-   tickSeconds = 1
 
 
 feedThread :: BotConfig -> Bool -> TVar (Bloom BS.ByteString) -> Chan BrockmanMessage -> IO ()
@@ -81,13 +78,13 @@ feedThread bot@BotConfig {..} isFirstTime bloom chan = do
     let delaySeconds = fromMaybe 300 botDelay
     liftIO $ when isFirstTime $ do
       randomDelay <- randomRIO (0, delaySeconds)
-      debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] sleep " <> show randomDelay
+      debug botFeed ("sleep " <> show randomDelay)
       sleepSeconds randomDelay
     r <- E.try $ get $ unpack botFeed
-    liftIO $ debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] fetch"
+    debug botFeed "fetch"
     case r of
       Left (E.SomeException ex) -> do  -- TODO handle exceptions, print to irc
-        liftIO $ debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] exception" <> show ex
+        debug botFeed ("exception" <> show ex)
       Right resp -> do
         items <-
           liftIO
@@ -99,7 +96,7 @@ feedThread bot@BotConfig {..} isFirstTime bloom chan = do
           ^. responseBody
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
     liftIO $ sleepSeconds delaySeconds
-    liftIO $ debugM "brockman.feedThread" ("[" <> unpack botFeed <> "] tick")
+    debug botFeed "tick"
     feedThread bot False bloom chan
 
 
@@ -116,13 +113,14 @@ runIRC BrockmanConfig {..} produce = do
   initialize = pure ()
   listenForPing chan = forever $ do
     maybeMessage <- await
-    optionally (liftIO . debugM "brockman.runIRC" . show) maybeMessage
     case maybeMessage of
-      Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
+      Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> do
+        debug "" ("Pinged by " <> show s)
+        liftIO $ writeChan chan (Pinged s)
       _ -> pure ()
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
-  infoM "brockman.shortenWith" ("Shortening " <> show item <> " with " <> show url)
+  debug "" ("Shortening " <> show item <> " with " <> show url)
   r <- post url ["uri" := itemLink item]
   pure item { itemLink = decodeUtf8 $ BL.toStrict $ r ^. responseBody }

@@ -25,6 +25,7 @@ import           Brockman.Bot
 import           Brockman.Types
 import           Brockman.Util                  ( eloop
                                                 , sleepSeconds
+                                                , debug
                                                 )
 
 brockmanOptions :: Parser FilePath
@@ -44,7 +45,7 @@ main = do
   configJSON <- LBS8.readFile configFile
   case eitherDecode configJSON of
     Right config@BrockmanConfig {..} -> do
-      debugM "brockman.main" (show config)
+      debug "" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- atomically $ newTVar bloom0
       forConcurrently_
