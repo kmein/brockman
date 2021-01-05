@@ -26,7 +26,6 @@ executable brockman
     network,
     optparse-applicative,
     random,
-    stm,
     text,
     wreq
   default-language: Haskell2010

@@ -3,7 +3,7 @@
 
 import           Control.Concurrent             ( forkIO )
 import           Control.Concurrent.Async
-import           Control.Concurrent.STM
+import           Control.Concurrent.MVar
 import           Control.Monad                  ( forever )
 import           Data.Aeson
 import qualified Data.BloomFilter              as Bloom
@@ -49,7 +49,7 @@ main = do
     Right config@BrockmanConfig {..} -> do
       debug "" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
-      bloom <- atomically $ newTVar bloom0
+      bloom <- newMVar bloom0
       forkIO $ eloop $ controllerThread config
       forConcurrently_
         (toList configBots)

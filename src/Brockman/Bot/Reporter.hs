@@ -7,7 +7,7 @@ import Brockman.Types
 import Brockman.Util (sleepSeconds, debug, notice)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
-import Control.Concurrent.STM
+import Control.Concurrent.MVar
 import Control.Monad (forM_, unless, forever, when)
 import Control.Monad.IO.Class (liftIO)
 import Data.BloomFilter (Bloom)
@@ -33,7 +33,7 @@ data ReporterMessage
   | Exception T.Text
 
 
-reporterThread :: TVar (Bloom BS.ByteString) -> T.Text -> BotConfig -> BrockmanConfig -> IO ()
+reporterThread :: MVar (Bloom BS.ByteString) -> T.Text -> BotConfig -> BrockmanConfig -> IO ()
 reporterThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} =
   withIrcConnection config listenForPing $ \chan -> do
     handshake nick botChannels
@@ -61,7 +61,7 @@ reporterThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} =
         _ -> pure ()
 
 
-feedThread :: BotConfig -> Bool -> TVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
+feedThread :: BotConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
 feedThread bot@BotConfig {..} isFirstTime bloom chan = do
     let delaySeconds = fromMaybe 300 botDelay
     liftIO $ when isFirstTime $ do
@@ -85,7 +85,6 @@ feedThread bot@BotConfig {..} isFirstTime bloom chan = do
       Right resp -> do
         items <-
           liftIO
-          $  atomically
           $  deduplicate bloom
           $  feedToItems
           $  parseFeedSource

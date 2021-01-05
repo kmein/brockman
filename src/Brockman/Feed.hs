@@ -2,7 +2,7 @@
 
 module Brockman.Feed where
 
-import           Control.Concurrent.STM
+import           Control.Concurrent.MVar
 import           Data.BloomFilter               ( Bloom )
 import qualified Data.BloomFilter              as Bloom
                                                 ( insertList
@@ -52,9 +52,9 @@ feedToItems = \case
     title = fromMaybe "untitled" (rssItemTitle item)
     links = maybe [] pure (rssItemLink item)
 
-deduplicate :: TVar (Bloom BS.ByteString) -> [FeedItem] -> STM [FeedItem]
-deduplicate var items = do
-  bloom <- readTVar var
-  writeTVar var
-    $ Bloom.insertList (map (Text.encodeUtf8 . itemLink) items) bloom
-  return $ filter (flip Bloom.notElem bloom . Text.encodeUtf8 . itemLink) items
+deduplicate :: MVar (Bloom BS.ByteString) -> [FeedItem] -> IO [FeedItem]
+deduplicate var items =
+  modifyMVar var $ \bloom ->
+    let bloom' = Bloom.insertList (map (Text.encodeUtf8 . itemLink) items) bloom
+        items' = filter (flip Bloom.notElem bloom . Text.encodeUtf8 . itemLink) items
+     in pure (bloom', items')
