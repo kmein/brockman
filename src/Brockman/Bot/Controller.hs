@@ -2,11 +2,16 @@
 module Brockman.Bot.Controller where
 
 import Brockman.Bot (handshake, withIrcConnection)
-import Brockman.Util (debug)
+import Brockman.Bot.Reporter (reporterThread)
+import Brockman.Util (debug, eloop)
 import Brockman.Types
+import Control.Concurrent (forkIO)
+import Control.Concurrent.Async (forConcurrently_)
 import Control.Concurrent.Chan
+import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
+import Data.BloomFilter (Bloom)
 import Data.ByteString (ByteString)
 import Data.Conduit
 import Data.Maybe
@@ -17,8 +22,8 @@ import qualified Network.IRC.Conduit as IRC
 
 data ControllerCommand = Info T.Text | Pinged (IRC.ServerName ByteString)
 
-controllerThread :: BrockmanConfig -> IO ()
-controllerThread config@BrockmanConfig{..}
+controllerThread :: MVar (Bloom ByteString) -> BrockmanConfig -> IO ()
+controllerThread bloom config@BrockmanConfig{..}
   | Just controller <- configController =
     let
       listen chan = forever $ await >>= \case
@@ -41,5 +46,9 @@ controllerThread config@BrockmanConfig{..}
                     T.unwords $ [botFeed, T.pack (show botChannels)] ++ maybeToList (T.pack . show <$> botDelay)
                   _ | nick == controllerNick controller -> "I drive the slaves around here."
                     | otherwise -> nick <> "? Never heard of him."
-     in withIrcConnection config listen speak
+     in do
+       forkIO $ withIrcConnection config listen speak
+       forConcurrently_
+         (M.toList configBots)
+         (\(nick, bot) -> eloop $ reporterThread bloom nick bot config)
   | otherwise = pure ()

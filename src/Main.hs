@@ -23,7 +23,6 @@ import           System.Log.Logger
 import           Text.Read
 
 import           Brockman.Bot.Controller        ( controllerThread )
-import           Brockman.Bot.Reporter          ( reporterThread )
 import           Brockman.Types
 import           Brockman.Util                  ( eloop
                                                 , sleepSeconds
@@ -50,9 +49,6 @@ main = do
       debug "" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- newMVar bloom0
-      forkIO $ eloop $ controllerThread config
-      forConcurrently_
-        (toList configBots)
-        (\(nick, bot) -> eloop $ reporterThread bloom nick bot config)
+      eloop $ controllerThread bloom config
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err
