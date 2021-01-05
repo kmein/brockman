@@ -22,8 +22,8 @@ import           System.IO                      ( hSetBuffering
 import           System.Log.Logger
 import           Text.Read
 
-import           Brockman.Bot
 import           Brockman.Bot.Controller        ( controllerThread )
+import           Brockman.Bot.Reporter          ( reporterThread )
 import           Brockman.Types
 import           Brockman.Util                  ( eloop
                                                 , sleepSeconds
@@ -53,6 +53,6 @@ main = do
       forkIO $ eloop $ controllerThread config
       forConcurrently_
         (toList configBots)
-        (\(nick, bot) -> eloop $ botThread bloom nick bot config)
+        (\(nick, bot) -> eloop $ reporterThread bloom nick bot config)
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err
