@@ -13,6 +13,8 @@ import qualified Data.ByteString               as BS
 import           Data.Maybe                     ( fromMaybe )
 import           Data.Text                      ( Text
                                                 , pack
+                                                , strip
+                                                , unwords
                                                 )
 import qualified Data.Text.Encoding            as Text
                                                 ( encodeUtf8 )
@@ -28,6 +30,10 @@ data FeedItem = FeedItem
   { itemTitle :: Text
   , itemLink :: Text
   } deriving (Show)
+
+
+display :: FeedItem -> Text
+display item = Data.Text.unwords [strip $ itemLink item, strip $ itemTitle item]
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
 feedToItems = \case

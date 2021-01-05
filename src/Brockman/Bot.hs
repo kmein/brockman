@@ -7,7 +7,7 @@ where
 
 import           Data.Conduit
 import           Control.Concurrent             ( forkIO )
-import           Control.Concurrent.MVar
+import           Control.Concurrent.Chan
 import           Control.Concurrent.STM
 import qualified Control.Exception             as E
 import           Control.Monad                  ( forM_
@@ -21,12 +21,9 @@ import qualified Data.ByteString               as BS
                                                 ( ByteString )
 import qualified Data.ByteString.Lazy          as BL
                                                 ( toStrict )
-import qualified Data.ByteString.Lazy.Char8    as LBS8
-                                                ( unpack )
 import           Data.Maybe                     ( fromMaybe )
 import           Data.Text                      ( Text
                                                 , unpack
-                                                , unwords
                                                 )
 import           Data.Text.Encoding             ( decodeUtf8
                                                 , encodeUtf8
@@ -49,8 +46,11 @@ import           Brockman.Util                  ( sleepSeconds
                                                 , optionally
                                                 )
 
+
+data BrockmanMessage = Pinged (IRC.ServerName BS.ByteString) | NewFeedItem FeedItem
+
 handshake :: Text -> BotConfig -> ConduitM () IRC.IrcMessage IO ()
-handshake nick bot@BotConfig {..} = do
+handshake nick BotConfig {..} = do
   liftIO $ noticeM "brockman.handshake" ("[" <> unpack botFeed <> "] Handshake as " <> show nick <> ", joining " <> show botChannels)
   yield $ IRC.Nick $ encodeUtf8 nick
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
@@ -58,32 +58,26 @@ handshake nick bot@BotConfig {..} = do
   -- maybe join channels separated by comma
 
 botThread :: TVar (Bloom BS.ByteString) -> Text -> BotConfig -> BrockmanConfig -> IO ()
-botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC config $ \pingedMVar -> do
+botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC config $ \chan -> do
   handshake nick bot
-  feedMVar <- liftIO newEmptyMVar
-  _ <- liftIO $ forkIO $ feedThread bot True bloom feedMVar
-  sendNews botChannels pingedMVar feedMVar
+  _ <- liftIO $ forkIO $ feedThread bot True bloom chan
+  forever $ do
+    liftIO (readChan chan) >>= \case
+      Pinged serverName -> do
+       liftIO $ debugM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Pong " <> show serverName)
+       yield $ IRC.Pong serverName
+      NewFeedItem item -> do
+         item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
+         liftIO $ noticeM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Sending " <> show (display item'))
+         forM_ botChannels $ \channel ->
+            yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
+    -- liftIO $ sleepSeconds tickSeconds -- dont heat the room
  where
-  display item = Data.Text.unwords [itemLink item, itemTitle item]
-  sendNews :: [Text] -> MVar (IRC.ServerName BS.ByteString) -> MVar [FeedItem] -> ConduitM () IRC.IrcMessage IO ()
-  sendNews cs pingedMVar feedMVar =
-    forever $ do
-      liftIO (tryTakeMVar pingedMVar) >>= \case
-        Nothing -> pure ()
-        Just serverName -> do
-          liftIO $ debugM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Pong " <> show serverName)
-          yield $ IRC.Pong serverName
-      liftIO (tryTakeMVar feedMVar) >>= \case
-        Nothing -> pure ()
-        Just items ->
-          forM_ items $ \item -> do
-            item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` unpack url) configShortener
-            liftIO $ noticeM "brockman.botThread.sendNews" ("[" <> unpack botFeed <> "] Sending " <> show (display item'))
-            forM_ cs $ \channel -> yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
-      liftIO $ sleepSeconds 1 -- dont heat the room
+   tickSeconds = 1
 
-feedThread :: BotConfig -> Bool -> TVar (Bloom BS.ByteString) -> MVar [FeedItem] -> IO ()
-feedThread bot@BotConfig {..} isFirstTime bloom feedMVar = do
+
+feedThread :: BotConfig -> Bool -> TVar (Bloom BS.ByteString) -> Chan BrockmanMessage -> IO ()
+feedThread bot@BotConfig {..} isFirstTime bloom chan = do
     let delaySeconds = fromMaybe 300 botDelay
     liftIO $ when isFirstTime $ do
       randomDelay <- randomRIO (0, delaySeconds)
@@ -103,28 +97,28 @@ feedThread bot@BotConfig {..} isFirstTime bloom feedMVar = do
           $  parseFeedSource
           $  resp
           ^. responseBody
-        unless isFirstTime $ putMVar feedMVar items
+        unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
     liftIO $ sleepSeconds delaySeconds
     liftIO $ debugM "brockman.feedThread" ("[" <> unpack botFeed <> "] tick")
-    feedThread bot False bloom feedMVar
+    feedThread bot False bloom chan
 
 
-runIRC :: BrockmanConfig -> (MVar (IRC.ServerName BS.ByteString) -> ConduitM () IRC.IrcMessage IO ()) -> IO ()
+runIRC :: BrockmanConfig -> (Chan BrockmanMessage -> ConduitM () IRC.IrcMessage IO ()) -> IO ()
 runIRC BrockmanConfig {..} produce = do
-  mvar <- newEmptyMVar
+  chan <- newChan
   (if configUseTls == Just True then IRC.ircTLSClient else IRC.ircClient)
     (fromMaybe 6667 $ ircPort configIrc)
     (encodeUtf8 $ ircHost configIrc)
     initialize
-    (consumeIrc mvar)
-    (produce mvar)
+    (listenForPing chan)
+    (produce chan)
  where
   initialize = pure ()
-  consumeIrc mvar = forever $ do
+  listenForPing chan = forever $ do
     maybeMessage <- await
     optionally (liftIO . debugM "brockman.runIRC" . show) maybeMessage
     case maybeMessage of
-      Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ putMVar mvar s
+      Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
       _ -> pure ()
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
