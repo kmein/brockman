@@ -39,6 +39,7 @@ controllerThread config@BrockmanConfig{..}
                 case M.lookup nick configBots of
                   Just BotConfig{..} -> do
                     T.unwords $ [botFeed, T.pack (show botChannels)] ++ maybeToList (T.pack . show <$> botDelay)
-                  _ -> nick <> "? Never heard of him."
+                  _ | nick == controllerNick controller -> "I drive the slaves around here."
+                    | otherwise -> nick <> "? Never heard of him."
      in withIrcConnection config listen speak
   | otherwise = pure ()
