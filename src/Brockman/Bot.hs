@@ -2,6 +2,7 @@
 
 module Brockman.Bot
   ( botThread
+  , handshake
   )
 where
 
@@ -61,17 +62,17 @@ data BrockmanMessage
   | NewFeedItem FeedItem
   | Exception T.Text
 
-handshake :: T.Text -> BotConfig -> ConduitM () IRC.IrcMessage IO ()
-handshake nick BotConfig {..} = do
-  notice botFeed ("handshake as " <> show nick <> ", joining " <> show botChannels)
+handshake :: T.Text -> [T.Text] -> ConduitM () IRC.IrcMessage IO ()
+handshake nick channels = do
+  notice "" ("handshake " <> show nick <> ", joining " <> show channels)
   yield $ IRC.Nick $ encodeUtf8 nick
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
-  mapM_ (yield . IRC.Join . encodeUtf8) botChannels
+  mapM_ (yield . IRC.Join . encodeUtf8) channels
   -- maybe join channels separated by comma
 
 botThread :: TVar (Bloom BS.ByteString) -> T.Text -> BotConfig -> BrockmanConfig -> IO ()
 botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC config $ \chan -> do
-  handshake nick bot
+  handshake nick botChannels
   _ <- liftIO $ forkIO $ feedThread bot True bloom chan
   forever $
     liftIO (readChan chan) >>= \case

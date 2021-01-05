@@ -3,6 +3,12 @@
     "host": "irc.r"
   },
   "shortener": "http://go",
+  "controller": {
+    "nick": "brockman",
+    "channels": [
+      "#news"
+    ]
+  },
   "bots": {
     "achan": {
       "feed": "http://boards.4channel.org/a/index.rss",

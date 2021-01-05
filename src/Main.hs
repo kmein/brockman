@@ -1,6 +1,7 @@
 {-# LANGUAGE ApplicativeDo, FlexibleContexts, OverloadedStrings,
   RecordWildCards, ScopedTypeVariables #-}
 
+import           Control.Concurrent             ( forkIO )
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import           Control.Monad                  ( forever )
@@ -22,6 +23,7 @@ import           System.Log.Logger
 import           Text.Read
 
 import           Brockman.Bot
+import           Brockman.Bot.Controller        ( controllerThread )
 import           Brockman.Types
 import           Brockman.Util                  ( eloop
                                                 , sleepSeconds
@@ -48,6 +50,7 @@ main = do
       debug "" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- atomically $ newTVar bloom0
+      forkIO $ eloop $ controllerThread config
       forConcurrently_
         (toList configBots)
         (\(nick, bot) -> eloop $ botThread bloom nick bot config)
