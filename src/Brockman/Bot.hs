@@ -103,7 +103,7 @@ feedThread bot@BotConfig {..} isFirstTime bloom feedMVar = do
           $  parseFeedSource
           $  resp
           ^. responseBody
-        unless False $ putMVar feedMVar items
+        unless isFirstTime $ putMVar feedMVar items
     liftIO $ sleepSeconds delaySeconds
     liftIO $ debugM "brockman.feedThread" ("[" <> unpack botFeed <> "] tick")
     feedThread bot False bloom feedMVar
