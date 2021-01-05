@@ -9,6 +9,7 @@ import           Data.Conduit
 import           Control.Concurrent             ( forkIO )
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
+import qualified Control.Exception             as E
 import           Control.Monad                  ( forM_
                                                 , unless
                                                 , forever
@@ -88,17 +89,21 @@ feedThread bot@BotConfig {..} isFirstTime bloom feedMVar = do
       randomDelay <- randomRIO (0, delaySeconds)
       debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] sleep " <> show randomDelay
       sleepSeconds randomDelay
-    r <- liftIO $ get $ unpack botFeed
+    r <- E.try $ get $ unpack botFeed
     liftIO $ debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] fetch"
-    items <-
-      liftIO
-      $  atomically
-      $  deduplicate bloom
-      $  feedToItems
-      $  parseFeedSource
-      $  r
-      ^. responseBody
-    unless isFirstTime $ putMVar feedMVar items
+    case r of
+      Left (E.SomeException ex) -> do  -- TODO handle exceptions, print to irc
+        liftIO $ debugM "brockman.feedThread" $ "[" <> unpack botFeed <> "] exception" <> show ex
+      Right resp -> do
+        items <-
+          liftIO
+          $  atomically
+          $  deduplicate bloom
+          $  feedToItems
+          $  parseFeedSource
+          $  resp
+          ^. responseBody
+        unless False $ putMVar feedMVar items
     liftIO $ sleepSeconds delaySeconds
     liftIO $ debugM "brockman.feedThread" ("[" <> unpack botFeed <> "] tick")
     feedThread bot False bloom feedMVar
