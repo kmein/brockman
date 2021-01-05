@@ -64,7 +64,7 @@ botThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} = runIRC conf
   _ <- liftIO $ forkIO $ feedThread bot True bloom feedMVar
   sendNews botChannels pingedMVar feedMVar
  where
-  display item = Data.Text.unwords [itemTitle item, itemLink item]
+  display item = Data.Text.unwords [itemLink item, itemTitle item]
   sendNews :: [Text] -> MVar (IRC.ServerName BS.ByteString) -> MVar [FeedItem] -> ConduitM () IRC.IrcMessage IO ()
   sendNews cs pingedMVar feedMVar =
     forever $ do
