@@ -85,8 +85,10 @@ $(makeAcidic ''BrockmanConfig ['tickNick, 'addNick, 'moveNick, 'removeNick, 'get
 
 
 myOptions :: Options
-myOptions =
-  defaultOptions {fieldLabelModifier = uncapitalize . dropWhile isLower}
+myOptions = defaultOptions
+  { fieldLabelModifier = uncapitalize . dropWhile isLower
+  , omitNothingFields = True
+  }
   where
     uncapitalize =
       \case
