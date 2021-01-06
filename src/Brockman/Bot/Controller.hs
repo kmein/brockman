@@ -41,14 +41,15 @@ controllerThread bloom configMVar = do
       let
         listen chan = forever $ await >>= \case
           Just (Right (IRC.Event _ _ (IRC.Privmsg _ (Right message)))) ->
-            case T.words $ decodeUtf8 message of
-              ["help"] -> liftIO $ writeChan chan Help
-              ["info", nick] -> liftIO $ writeChan chan (Info nick)
-              ["move", nick, url] -> liftIO $ writeChan chan (Move nick url)
-              ["add", nick, url] -> liftIO $ writeChan chan (Add nick url)
-              ["remove", nick] -> liftIO $ writeChan chan (Remove nick)
-              ["tick", nick, tickString]
+            case T.words <$> T.stripPrefix (controllerNick controller <> ":") (decodeUtf8 message) of
+              Just ["help"] -> liftIO $ writeChan chan Help
+              Just ["info", nick] -> liftIO $ writeChan chan (Info nick)
+              Just ["move", nick, url] -> liftIO $ writeChan chan (Move nick url)
+              Just ["add", nick, url] -> liftIO $ writeChan chan (Add nick url)
+              Just ["remove", nick] -> liftIO $ writeChan chan (Remove nick)
+              Just ["tick", nick, tickString]
                 | Just tick <- readMay (T.unpack tickString) -> liftIO $ writeChan chan (Tick nick tick)
+              Just _ -> liftIO $ writeChan chan Help
               _ -> pure ()
           _ -> pure ()
         speak chan = do
@@ -59,7 +60,7 @@ controllerThread bloom configMVar = do
             notice (controllerNick controller) (show command)
             case command of
               Help -> do
-                forM_ (controllerChannels controller) $ \channel ->
+                forM_ (controllerChannels controller) $ \channel -> do
                   mapM (yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8)
                     [ "help — send this helpful message"
                     , "info NICK — display a bot's settings"
