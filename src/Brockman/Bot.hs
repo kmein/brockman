@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings, NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Brockman.Bot where
 
 import Brockman.Types
@@ -8,12 +10,12 @@ import Data.ByteString (ByteString)
 import Data.Conduit
 import Data.Conduit.List (sourceList)
 import Data.Maybe
-import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Text as T
+import Data.Text.Encoding (encodeUtf8)
 import qualified Network.IRC.Conduit as IRC
 
 withIrcConnection :: BrockmanConfig -> (Chan a -> ConduitM (Either ByteString IRC.IrcEvent) Void IO ()) -> (Chan a -> ConduitM () IRC.IrcMessage IO ()) -> IO ()
-withIrcConnection BrockmanConfig{configIrc, configUseTls} listen speak = do
+withIrcConnection BrockmanConfig {configIrc, configUseTls} listen speak = do
   chan <- newChan
   (if configUseTls == Just True then IRC.ircTLSClient else IRC.ircClient)
     (fromMaybe 6667 $ ircPort configIrc)
@@ -28,17 +30,20 @@ handshake nick channels = do
   yield $ IRC.Nick $ encodeUtf8 nick
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
   mapM_ (yield . IRC.Join . encodeUtf8) channels
-  -- maybe join channels separated by comma
+
+-- maybe join channels separated by comma
 
 broadcastNotice :: Monad m => [T.Text] -> T.Text -> ConduitT i (IRC.Message ByteString) m ()
-broadcastNotice channels message = sourceList
-  [ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
-  | channel <- channels
-  ]
+broadcastNotice channels message =
+  sourceList
+    [ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
+      | channel <- channels
+    ]
 
 broadcast :: Monad m => [T.Text] -> [T.Text] -> ConduitT i (IRC.Message ByteString) m ()
-broadcast channels messages = sourceList
-  [ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 message
-  | channel <- channels
-  , message <- messages
-  ]
+broadcast channels messages =
+  sourceList
+    [ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 message
+      | channel <- channels,
+        message <- messages
+    ]

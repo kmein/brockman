@@ -1,4 +1,6 @@
-{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Brockman.Types where
 
@@ -13,53 +15,59 @@ import System.Directory (getHomeDirectory)
 import System.FilePath ((</>))
 
 configBotsL :: Lens' BrockmanConfig (Map Text BotConfig)
-configBotsL = lens configBots (\config bots -> config { configBots = bots })
+configBotsL = lens configBots (\config bots -> config {configBots = bots})
 
 botFeedL :: Lens' BotConfig Text
-botFeedL = lens botFeed (\bot feed -> bot { botFeed = feed })
+botFeedL = lens botFeed (\bot feed -> bot {botFeed = feed})
 
 botDelayL :: Lens' BotConfig (Maybe Int)
-botDelayL = lens botDelay (\bot delay -> bot { botDelay = delay })
+botDelayL = lens botDelay (\bot delay -> bot {botDelay = delay})
 
 data BrockmanConfig = BrockmanConfig
-  { configBots :: Map Text BotConfig
-  , configUseTls :: Maybe Bool
-  , configIrc :: IrcConfig
-  , configShortener :: Maybe Text
-  , configController :: Maybe ControllerConfig
-  , configStatePath :: Maybe FilePath
-  } deriving (Generic, Show, Typeable)
+  { configBots :: Map Text BotConfig,
+    configUseTls :: Maybe Bool,
+    configIrc :: IrcConfig,
+    configShortener :: Maybe Text,
+    configController :: Maybe ControllerConfig,
+    configStatePath :: Maybe FilePath
+  }
+  deriving (Generic, Show, Typeable)
 
 data ControllerConfig = ControllerConfig
-  { controllerNick :: Text
-  , controllerChannels :: [Text]
-  } deriving (Generic, Show, Typeable)
+  { controllerNick :: Text,
+    controllerChannels :: [Text]
+  }
+  deriving (Generic, Show, Typeable)
 
 data IrcConfig = IrcConfig
-  { ircHost :: Text
-  , ircPort :: Maybe Int
-  } deriving (Generic, Show, Typeable)
+  { ircHost :: Text,
+    ircPort :: Maybe Int
+  }
+  deriving (Generic, Show, Typeable)
 
 data BotConfig = BotConfig
-  { botFeed :: Text
-  , botChannels :: [Text]
-  , botDelay :: Maybe Int
-  } deriving (Generic, Show, Typeable)
+  { botFeed :: Text,
+    botChannels :: [Text],
+    botDelay :: Maybe Int
+  }
+  deriving (Generic, Show, Typeable)
 
 statePath :: BrockmanConfig -> IO FilePath
 statePath = maybe defaultStatePath pure . configStatePath
-  where defaultStatePath = (</> "brockman.json") <$> getHomeDirectory
+  where
+    defaultStatePath = (</> "brockman.json") <$> getHomeDirectory
 
 myOptions :: Options
-myOptions = defaultOptions
-  { fieldLabelModifier = uncapitalize . dropWhile isLower
-  , omitNothingFields = True
-  }
+myOptions =
+  defaultOptions
+    { fieldLabelModifier = uncapitalize . dropWhile isLower,
+      omitNothingFields = True
+    }
   where
     uncapitalize =
       \case
         [] -> []
-        (x:xs) -> toLower x : xs
+        (x : xs) -> toLower x : xs
 
 instance FromJSON BrockmanConfig where
   parseJSON = genericParseJSON myOptions

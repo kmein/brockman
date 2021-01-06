@@ -2,20 +2,21 @@
 
 module Brockman.Util where
 
-import Control.Concurrent (threadDelay, killThread, myThreadId)
+import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
-import Control.Monad.IO.Class (MonadIO(..), liftIO)
+import Control.Monad.IO.Class (MonadIO (..), liftIO)
 import Data.Text (Text, unpack)
 import System.Log.Logger
 
 eloop :: IO a -> IO a
-eloop x = handle @SomeException
-  (\ex -> do
-    warningM "brockman" (show ex)
-    sleepSeconds 10
+eloop x =
+  handle @SomeException
+    ( \ex -> do
+        warningM "brockman" (show ex)
+        sleepSeconds 10
+        x
+    )
     x
-  )
-  x
 
 sleepSeconds :: Int -> IO ()
 sleepSeconds n = threadDelay (n * 10 ^ 6)
