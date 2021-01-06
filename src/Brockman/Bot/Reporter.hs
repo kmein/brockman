@@ -33,6 +33,7 @@ data ReporterMessage
   = Pinged (IRC.ServerName BS.ByteString)
   | NewFeedItem FeedItem
   | Exception T.Text
+  deriving (Show)
 
 -- return the current config or kill thread if the key is not present
 withCurrentBotConfig :: MonadIO m => T.Text -> AcidState BrockmanConfig -> (BotConfig -> m ()) -> m ()
@@ -48,8 +49,10 @@ reporterThread bloom configState nick = do
       handshake nick botChannels
       _ <- liftIO $ forkIO $ feedThread nick configState True bloom chan
       forever $
-        withCurrentBotConfig nick configState $ \BotConfig{botChannels} ->
-          liftIO (readChan chan) >>= \case
+        withCurrentBotConfig nick configState $ \BotConfig{botChannels} -> do
+          command <- liftIO (readChan chan)
+          notice nick $ show command
+          case command of
             Pinged serverName -> do
               debug nick ("pong " <> show serverName)
               yield $ IRC.Pong serverName
