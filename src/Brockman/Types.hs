@@ -5,6 +5,9 @@ module Brockman.Types
   , BotConfig(..)
   , ControllerConfig(..)
   , IRCConfig(..)
+  , configBotsL
+  , botFeedL
+  , botDelayL
   ) where
 
 import Data.Aeson
@@ -12,6 +15,16 @@ import Data.Char (isLower, toLower)
 import Data.Map (Map)
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import Control.Lens
+
+configBotsL :: Lens' BrockmanConfig (Map Text BotConfig)
+configBotsL = lens configBots (\config bots -> config { configBots = bots })
+
+botFeedL :: Lens' BotConfig Text
+botFeedL = lens botFeed (\bot feed -> bot { botFeed = feed })
+
+botDelayL :: Lens' BotConfig (Maybe Int)
+botDelayL = lens botDelay (\bot delay -> bot { botDelay = delay })
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Text BotConfig

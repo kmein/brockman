@@ -14,7 +14,7 @@ import Data.BloomFilter (Bloom)
 import Data.Conduit
 import Data.Maybe (fromMaybe)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Lens.Micro
+import Control.Lens
 import Network.HTTP.Client (HttpExceptionContent(ConnectionFailure, StatusCodeException), HttpException(HttpExceptionRequest))
 import Network.Socket (HostName)
 import Network.Wreq (FormParam((:=)), get, post, responseBody, responseStatus, statusCode, statusMessage)
@@ -55,11 +55,11 @@ reporterThread bloom configMVar nick = do
             Just BotConfig{..} ->
               liftIO (readChan chan) >>= \case
                 Pinged serverName -> do
-                  debug botFeed ("pong " <> show serverName)
+                  debug nick ("pong " <> show serverName)
                   yield $ IRC.Pong serverName
                 NewFeedItem item -> do
                    item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
-                   notice botFeed ("sending " <> show (display item'))
+                   notice nick ("sending " <> show (display item'))
                    forM_ botChannels $ \channel ->
                       yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
                 Exception message ->
@@ -78,14 +78,14 @@ reporterThread bloom configMVar nick = do
 feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
 feedThread nick configMVar isFirstTime bloom chan = currentBotConfig nick configMVar >>= \case
   Nothing -> pure ()
-  Just bot@BotConfig{..} -> do
+  Just BotConfig{..} -> do
     let delaySeconds = fromMaybe 300 botDelay
     liftIO $ when isFirstTime $ do
       randomDelay <- randomRIO (0, delaySeconds)
-      debug botFeed ("sleep " <> show randomDelay)
+      debug nick ("sleep " <> show randomDelay)
       sleepSeconds randomDelay
     r <- E.try $ get $ T.unpack botFeed
-    debug botFeed "fetch"
+    debug nick ("fetch " <> T.unpack botFeed)
     case r of
       Left exception ->
         let
@@ -96,7 +96,7 @@ feedThread nick configMVar isFirstTime bloom chan = currentBotConfig nick config
             HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
             _ -> T.pack $ show exception
          in do
-          debug botFeed ("exception" <> T.unpack message)
+          debug nick ("exception" <> T.unpack message)
           writeChan chan (Exception message)
       Right resp -> do
         items <-
@@ -108,7 +108,7 @@ feedThread nick configMVar isFirstTime bloom chan = currentBotConfig nick config
           ^. responseBody
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
     liftIO $ sleepSeconds delaySeconds
-    debug botFeed "tick"
+    debug nick "tick"
     feedThread nick configMVar False bloom chan
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem

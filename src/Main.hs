@@ -1,8 +1,6 @@
 {-# LANGUAGE ApplicativeDo, FlexibleContexts, OverloadedStrings,
   RecordWildCards, ScopedTypeVariables #-}
 
-import           Control.Concurrent             ( forkIO )
-import           Control.Concurrent.Async
 import           Control.Concurrent.MVar
 import           Control.Monad                  ( forever )
 import           Data.Aeson
@@ -11,7 +9,6 @@ import qualified Data.BloomFilter              as Bloom
 import           Data.BloomFilter.Hash          ( cheapHashes )
 import qualified Data.ByteString.Lazy.Char8    as LBS8
                                                 ( readFile )
-import           Data.Map                       ( toList )
 import           Data.Maybe                     ( fromMaybe )
 import           Options.Applicative
 import           System.Environment             ( lookupEnv )

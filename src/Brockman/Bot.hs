@@ -23,7 +23,7 @@ withIrcConnection BrockmanConfig {..} listen speak = do
 
 handshake :: T.Text -> [T.Text] -> ConduitM () IRC.IrcMessage IO ()
 handshake nick channels = do
-  notice "" ("handshake " <> show nick <> ", joining " <> show channels)
+  notice nick ("handshake, joining " <> show channels)
   yield $ IRC.Nick $ encodeUtf8 nick
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
   mapM_ (yield . IRC.Join . encodeUtf8) channels

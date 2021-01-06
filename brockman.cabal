@@ -22,10 +22,11 @@ executable brockman
     hslogger,
     http-client,
     irc-conduit,
-    microlens,
+    lens,
     network,
     optparse-applicative,
     random,
+    safe,
     text,
     wreq
   default-language: Haskell2010
