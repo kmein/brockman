@@ -20,6 +20,12 @@ import System.FilePath ((</>))
 configBotsL :: Lens' BrockmanConfig (Map Text BotConfig)
 configBotsL = lens configBots (\config bots -> config {configBots = bots})
 
+configControllerL :: Lens' BrockmanConfig (Maybe ControllerConfig)
+configControllerL = lens configController (\config controller -> config {configController = controller})
+
+controllerChannelsL :: Lens' ControllerConfig [Text]
+controllerChannelsL = lens controllerChannels (\controller channels -> controller {controllerChannels = channels})
+
 botFeedL :: Lens' BotConfig Text
 botFeedL = lens botFeed (\bot feed -> bot {botFeed = feed})
 
