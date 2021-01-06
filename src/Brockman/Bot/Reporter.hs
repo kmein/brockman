@@ -51,6 +51,7 @@ reporterThread bloom configMVar nick = do
   withIrcConnection config listen $ \chan -> do
     withCurrentBotConfig nick configMVar $ \BotConfig {botChannels} -> do
       handshake nick botChannels
+      yield $ IRC.Mode (encodeUtf8 nick) False [] ["+D"] -- deafen to PRIVMSGs
       _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
       forever $
         withCurrentBotConfig nick configMVar $ \BotConfig {botChannels} -> do
