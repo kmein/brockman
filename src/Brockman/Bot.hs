@@ -30,9 +30,15 @@ handshake nick channels = do
   mapM_ (yield . IRC.Join . encodeUtf8) channels
   -- maybe join channels separated by comma
 
+broadcastNotice :: Monad m => [T.Text] -> T.Text -> ConduitT i (IRC.Message ByteString) m ()
+broadcastNotice channels message = sourceList
+  [ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
+  | channel <- channels
+  ]
+
 broadcast :: Monad m => [T.Text] -> [T.Text] -> ConduitT i (IRC.Message ByteString) m ()
 broadcast channels messages = sourceList
-  [ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
+  [ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 message
   | channel <- channels
   , message <- messages
   ]

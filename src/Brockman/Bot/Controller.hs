@@ -9,14 +9,14 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.Async (forConcurrently_)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
-import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
+import Data.Acid
 import Data.BloomFilter (Bloom)
 import Data.ByteString (ByteString)
 import Data.Conduit
 import Data.Maybe
-import Data.Text.Encoding (encodeUtf8, decodeUtf8)
+import Data.Text.Encoding (decodeUtf8)
 import Safe (readMay)
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -32,9 +32,9 @@ data ControllerCommand
   | Help
   deriving (Show)
 
-controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
-controllerThread bloom configMVar = do
-  config@BrockmanConfig{configBots, configController} <- readMVar configMVar
+controllerThread :: MVar (Bloom ByteString) -> AcidState BrockmanConfig -> IO ()
+controllerThread bloom configState = do
+  config@BrockmanConfig{configBots, configController} <- query configState GetConfig
   case configController of
     Nothing -> pure ()
     Just ControllerConfig{controllerNick, controllerChannels} ->
@@ -55,7 +55,7 @@ controllerThread bloom configMVar = do
         speak chan = do
           handshake controllerNick controllerChannels
           forever $ do
-            config@BrockmanConfig{configBots} <- liftIO (readMVar configMVar)
+            config@BrockmanConfig{configBots} <- liftIO $ query configState GetConfig
             command <- liftIO (readChan chan)
             notice controllerNick (show command)
             case command of
@@ -69,19 +69,19 @@ controllerThread bloom configMVar = do
                   , "remove NICK — tell a bot to commit suicice"
                   ]
               Tick nick tick -> do
-                liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick.mapped.botDelayL ?~ tick)
+                liftIO $ update configState $ TickNick nick tick
                 notice nick ("change tick speed to " <> show tick)
                 broadcast controllerChannels [nick <> " @ " <> T.pack (show tick) <> " seconds"]
               Add nick url -> do
-                liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botChannels = controllerChannels})
-                liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
+                liftIO $ update configState $ AddNick nick url controllerChannels
+                _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configState nick
                 pure ()
               Remove nick -> do
-                liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick .~ Nothing)
+                liftIO $ update configState $ RemoveNick nick
                 notice nick "remove"
                 broadcast controllerChannels [nick <> " is expected to commit suicide soon"]
               Move nick url -> do
-                liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick.mapped.botFeedL .~ url)
+                liftIO $ update configState $ MoveNick nick url
                 notice nick ("move to " <> T.unpack url)
                 broadcast controllerChannels [nick <> " -> " <> url]
               Pinged serverName -> do
@@ -97,4 +97,4 @@ controllerThread bloom configMVar = do
        in do
          _ <- forkIO $ withIrcConnection config listen speak
          forConcurrently_ (M.keys configBots) $ \nick ->
-           eloop $ reporterThread bloom configMVar nick
+           eloop $ reporterThread bloom configState nick
