@@ -19,10 +19,11 @@ import Data.BloomFilter (Bloom)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
 import Data.Conduit
+import Data.List (delete, insert)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
-import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest), HttpExceptionContent (ConnectionFailure, StatusCodeException))
 import qualified Network.IRC.Conduit as IRC
 import Network.Socket (HostName)
@@ -32,6 +33,8 @@ import Text.Feed.Import (parseFeedSource)
 
 data ReporterMessage
   = Pinged (IRC.ServerName BS.ByteString)
+  | Invited (IRC.ChannelName BS.ByteString)
+  | Kicked (IRC.ChannelName BS.ByteString)
   | NewFeedItem FeedItem
   | Exception T.Text
   deriving (Show)
@@ -45,7 +48,7 @@ withCurrentBotConfig nick configMVar handler = do
 reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> T.Text -> IO ()
 reporterThread bloom configMVar nick = do
   config@BrockmanConfig {configShortener} <- readMVar configMVar
-  withIrcConnection config listenForPing $ \chan -> do
+  withIrcConnection config listen $ \chan -> do
     withCurrentBotConfig nick configMVar $ \BotConfig {botChannels} -> do
       handshake nick botChannels
       _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
@@ -63,11 +66,22 @@ reporterThread bloom configMVar nick = do
               broadcast botChannels [display item']
             Exception message ->
               broadcastNotice botChannels message
+            Kicked channel -> do
+              let channel' = decodeUtf8 channel
+              liftIO $ update configMVar $ configBotsL . at nick . mapped . botChannelsL %~ delete channel'
+              notice nick $ "kicked from " <> T.unpack channel'
+            Invited channel -> do
+              let channel' = decodeUtf8 channel
+              liftIO $ update configMVar $ configBotsL . at nick . mapped . botChannelsL %~ insert channel'
+              notice nick $ "invited to " <> T.unpack channel'
+              yield $ IRC.Join channel
   where
-    listenForPing chan =
+    listen chan =
       forever $
         await >>= \case
           Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
+          Just (Right (IRC.Event _ _ (IRC.Invite channel _))) -> liftIO $ writeChan chan (Invited channel)
+          Just (Right (IRC.Event _ _ (IRC.Kick channel _ _))) -> liftIO $ writeChan chan (Kicked channel)
           _ -> pure ()
 
 feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()

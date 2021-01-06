@@ -4,8 +4,11 @@
 
 module Brockman.Types where
 
+import Control.Concurrent.MVar
 import Control.Lens
 import Data.Aeson hiding ((.=))
+import Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Lazy as BL
 import Data.Char (isLower, toLower)
 import Data.Map (Map)
 import Data.Text (Text)
@@ -22,6 +25,9 @@ botFeedL = lens botFeed (\bot feed -> bot {botFeed = feed})
 
 botDelayL :: Lens' BotConfig (Maybe Int)
 botDelayL = lens botDelay (\bot delay -> bot {botDelay = delay})
+
+botChannelsL :: Lens' BotConfig [Text]
+botChannelsL = lens botChannels (\bot channels -> bot {botChannels = channels})
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Text BotConfig,
@@ -56,6 +62,15 @@ statePath :: BrockmanConfig -> IO FilePath
 statePath = maybe defaultStatePath pure . configStatePath
   where
     defaultStatePath = (</> "brockman.json") <$> getHomeDirectory
+
+update :: MVar BrockmanConfig -> (BrockmanConfig -> BrockmanConfig) -> IO ()
+update stateMVar function = modifyMVar_ stateMVar $ \state ->
+  let state' = function state
+   in state' <$ dump state'
+  where
+    dump config = do
+      path <- statePath config
+      BL.writeFile path $ encodePretty config
 
 myOptions :: Options
 myOptions =

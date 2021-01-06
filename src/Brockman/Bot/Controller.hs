@@ -14,10 +14,8 @@ import Control.Concurrent.MVar
 import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
-import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.BloomFilter (Bloom)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as BL
 import Data.Conduit
 import qualified Data.Map as M
 import Data.Maybe
@@ -30,20 +28,11 @@ data ControllerCommand
   = Info (IRC.NickName T.Text)
   | Pinged (IRC.ServerName ByteString)
   | Move (IRC.NickName T.Text) T.Text
-  | Add (IRC.NickName T.Text) (IRC.ChannelName T.Text)
+  | Add (IRC.NickName T.Text) T.Text
   | Remove (IRC.NickName T.Text)
   | Tick (IRC.NickName T.Text) Int
   | Help
   deriving (Show)
-
-update :: MVar BrockmanConfig -> (BrockmanConfig -> BrockmanConfig) -> IO ()
-update stateMVar function = modifyMVar_ stateMVar $ \state ->
-  let state' = function state
-   in state' <$ dump state'
-  where
-    dump config = do
-      path <- statePath config
-      BL.writeFile path $ encodePretty config
 
 controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
 controllerThread bloom configMVar = do
@@ -84,7 +73,9 @@ controllerThread bloom configMVar = do
                       "move NICK FEED_URL — change a bot's feed url",
                       "tick NICK SECONDS — change a bot's tick speed",
                       "add NICK FEED_URL — add a new bot to all channels I am in",
-                      "remove NICK — tell a bot to commit suicice"
+                      "remove NICK — tell a bot to commit suicice",
+                      "/invite NICK — invite a bot from your channel",
+                      "/kick NICK — remove a bot from your channel"
                     ]
                 Tick nick tick -> do
                   liftIO $ update configMVar $ configBotsL . at nick . mapped . botDelayL ?~ tick
