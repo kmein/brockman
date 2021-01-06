@@ -6,7 +6,6 @@ import Brockman.Bot.Reporter (reporterThread)
 import Brockman.Types
 import Brockman.Util (notice, debug, eloop)
 import Control.Concurrent (forkIO)
-import Control.Concurrent.Async (forConcurrently_)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
 import Control.Monad
@@ -96,6 +95,6 @@ controllerThread bloom configState = do
                     _ | nick == controllerNick -> "https://github.com/kmein/brockman"
                       | otherwise -> nick <> "? Never heard of him."
        in do
-         _ <- forkIO $ withIrcConnection config listen speak
-         forConcurrently_ (M.keys configBots) $ \nick ->
-           eloop $ reporterThread bloom configState nick
+         forM_ (M.keys configBots) $ \nick ->
+           forkIO $ eloop $ reporterThread bloom configState nick
+         withIrcConnection config listen speak

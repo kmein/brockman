@@ -13,7 +13,6 @@ executable brockman
   build-depends:
     acid-state,
     aeson,
-    async,
     base,
     bloomfilter,
     bytestring,
