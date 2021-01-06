@@ -1,28 +1,16 @@
-{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase, TemplateHaskell, TypeFamilies #-}
+{-# LANGUAGE DeriveGeneric, FlexibleContexts, LambdaCase #-}
 
-module Brockman.Types
-  ( BrockmanConfig(..)
-  , BotConfig(..)
-  , ControllerConfig(..)
-  , IRCConfig(..)
-  , RemoveNick(..)
-  , MoveNick(..)
-  , AddNick(..)
-  , TickNick(..)
-  , GetConfig(..)
-  ) where
+module Brockman.Types where
 
-import Data.Acid
 import Data.Aeson hiding ((.=))
 import Data.Char (isLower, toLower)
 import Data.Map (Map)
-import Data.SafeCopy (base, deriveSafeCopy)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.Lens
-import Control.Monad.Reader.Class (MonadReader(ask))
-import qualified Network.IRC.Conduit as IRC
+import System.FilePath ((</>))
+import System.Directory (getHomeDirectory)
 
 configBotsL :: Lens' BrockmanConfig (Map Text BotConfig)
 configBotsL = lens configBots (\config bots -> config { configBots = bots })
@@ -33,31 +21,13 @@ botFeedL = lens botFeed (\bot feed -> bot { botFeed = feed })
 botDelayL :: Lens' BotConfig (Maybe Int)
 botDelayL = lens botDelay (\bot delay -> bot { botDelay = delay })
 
-removeNick :: IRC.NickName Text -> Update BrockmanConfig ()
-removeNick nick =
-  configBotsL.at nick .= Nothing
-
-moveNick :: IRC.NickName Text -> Text -> Update BrockmanConfig ()
-moveNick nick url =
-  configBotsL.at nick.mapped.botFeedL .= url
-
-addNick :: IRC.NickName Text -> Text -> [IRC.ChannelName Text] -> Update BrockmanConfig ()
-addNick nick url channels =
-  configBotsL.at nick ?= BotConfig {botFeed = url, botDelay = Nothing, botChannels = channels}
-
-tickNick :: IRC.NickName Text -> Int -> Update BrockmanConfig ()
-tickNick nick tick =
-  configBotsL.at nick.mapped.botDelayL ?= tick
-
-getConfig :: Query BrockmanConfig BrockmanConfig
-getConfig = ask
-
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Text BotConfig
   , configUseTls :: Maybe Bool
   , configIrc :: IRCConfig
   , configShortener :: Maybe Text
   , configController :: Maybe ControllerConfig
+  , configStatePath :: Maybe FilePath
   } deriving (Generic, Show, Typeable)
 
 data ControllerConfig = ControllerConfig
@@ -76,13 +46,9 @@ data BotConfig = BotConfig
   , botDelay :: Maybe Int
   } deriving (Generic, Show, Typeable)
 
-
-$(deriveSafeCopy 0 'base ''ControllerConfig)
-$(deriveSafeCopy 0 'base ''IRCConfig)
-$(deriveSafeCopy 0 'base ''BotConfig)
-$(deriveSafeCopy 0 'base ''BrockmanConfig)
-$(makeAcidic ''BrockmanConfig ['tickNick, 'addNick, 'moveNick, 'removeNick, 'getConfig])
-
+statePath :: BrockmanConfig -> IO FilePath
+statePath = maybe defaultStatePath pure . configStatePath
+  where defaultStatePath = (</> "brockman.json") <$> getHomeDirectory
 
 myOptions :: Options
 myOptions = defaultOptions

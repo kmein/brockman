@@ -1,8 +1,8 @@
 {-# LANGUAGE ApplicativeDo, FlexibleContexts, OverloadedStrings, ScopedTypeVariables #-}
 
+import           Brockman.Types
 import           Control.Concurrent.MVar
 import           Control.Monad                  ( forever )
-import           Data.Acid
 import           Data.Aeson
 import qualified Data.BloomFilter              as Bloom
                                                 ( fromList )
@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy.Char8    as LBS8
 import           Data.Maybe                     ( fromMaybe )
 import           Options.Applicative
 import           System.Environment             ( lookupEnv )
+import           System.Directory               ( doesFileExist )
 import           System.IO                      ( hSetBuffering
                                                 , stderr
                                                 , BufferMode(LineBuffering)
@@ -44,8 +45,17 @@ main = do
     Right config -> do
       debug "" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
+      stateFile <- statePath config
+      stateFileExists <- doesFileExist stateFile
       bloom <- newMVar bloom0
-      configState <- openLocalState config
-      eloop $ controllerThread bloom configState
+      config' <-
+        if stateFileExists
+           then do
+             configJSON' <- LBS8.readFile stateFile
+             case eitherDecode configJSON' of
+               Right config' -> config' <$ warningM [] "Parsed state file, resuming"
+               Left _ -> config <$ warningM [] "State file is corrupt, reverting to config"
+           else config <$ warningM [] "No state file exists yet, starting with config"
+      eloop $ controllerThread bloom =<< newMVar config'
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err

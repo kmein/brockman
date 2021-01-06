@@ -11,24 +11,24 @@ executable brockman
   main-is: Main.hs
   other-modules: Brockman.Bot, Brockman.Bot.Controller, Brockman.Bot.Reporter, Brockman.Feed, Brockman.Types, Brockman.Util
   build-depends:
-    acid-state,
     aeson,
+    aeson-pretty,
     base,
     bloomfilter,
     bytestring,
     conduit,
     containers,
+    directory,
     feed,
+    filepath,
     hslogger,
     http-client,
     irc-conduit,
     lens,
-    mtl,
     network,
     optparse-applicative,
     random,
     safe,
-    safecopy,
     text,
     wreq
   default-language: Haskell2010

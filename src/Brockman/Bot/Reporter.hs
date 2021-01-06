@@ -10,7 +10,6 @@ import Control.Concurrent.Chan
 import Control.Concurrent.MVar
 import Control.Monad (unless, forever, when)
 import Control.Monad.IO.Class (liftIO, MonadIO)
-import Data.Acid
 import Data.BloomFilter (Bloom)
 import Data.Conduit
 import Data.Maybe (fromMaybe)
@@ -36,20 +35,20 @@ data ReporterMessage
   deriving (Show)
 
 -- return the current config or kill thread if the key is not present
-withCurrentBotConfig :: MonadIO m => T.Text -> AcidState BrockmanConfig -> (BotConfig -> m ()) -> m ()
-withCurrentBotConfig nick configState handler = do
-  BrockmanConfig{configBots} <- liftIO $ query configState GetConfig
+withCurrentBotConfig :: MonadIO m => T.Text -> MVar BrockmanConfig -> (BotConfig -> m ()) -> m ()
+withCurrentBotConfig nick configMVar handler = do
+  BrockmanConfig{configBots} <- liftIO $ readMVar configMVar
   maybe (liftIO suicide) handler $ M.lookup nick configBots
 
-reporterThread :: MVar (Bloom BS.ByteString) -> AcidState BrockmanConfig -> T.Text -> IO ()
-reporterThread bloom configState nick = do
-  config@BrockmanConfig{configShortener} <- query configState GetConfig
+reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> T.Text -> IO ()
+reporterThread bloom configMVar nick = do
+  config@BrockmanConfig{configShortener} <- readMVar configMVar
   withIrcConnection config listenForPing $ \chan -> do
-    withCurrentBotConfig nick configState $ \BotConfig{botChannels} -> do
+    withCurrentBotConfig nick configMVar $ \BotConfig{botChannels} -> do
       handshake nick botChannels
-      _ <- liftIO $ forkIO $ feedThread nick configState True bloom chan
+      _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
       forever $
-        withCurrentBotConfig nick configState $ \BotConfig{botChannels} -> do
+        withCurrentBotConfig nick configMVar $ \BotConfig{botChannels} -> do
           command <- liftIO (readChan chan)
           notice nick $ show command
           case command of
@@ -69,9 +68,9 @@ reporterThread bloom configState nick = do
         _ -> pure ()
 
 
-feedThread :: T.Text -> AcidState BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
-feedThread nick configState isFirstTime bloom chan =
-  withCurrentBotConfig nick configState $ \BotConfig{botDelay, botFeed} -> do
+feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
+feedThread nick configMVar isFirstTime bloom chan =
+  withCurrentBotConfig nick configMVar $ \BotConfig{botDelay, botFeed} -> do
     let delaySeconds = fromMaybe 300 botDelay
     liftIO $ when isFirstTime $ do
       randomDelay <- randomRIO (0, delaySeconds)
@@ -102,7 +101,7 @@ feedThread nick configState isFirstTime bloom chan =
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
     liftIO $ sleepSeconds delaySeconds
     debug nick "tick"
-    feedThread nick configState False bloom chan
+    feedThread nick configMVar False bloom chan
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do

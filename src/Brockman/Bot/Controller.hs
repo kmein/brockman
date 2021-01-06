@@ -8,15 +8,17 @@ import Brockman.Util (notice, debug, eloop)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
+import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
-import Data.Acid
+import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.BloomFilter (Bloom)
 import Data.ByteString (ByteString)
 import Data.Conduit
 import Data.Maybe
 import Data.Text.Encoding (decodeUtf8)
 import Safe (readMay)
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Network.IRC.Conduit as IRC
@@ -31,11 +33,20 @@ data ControllerCommand
   | Help
   deriving (Show)
 
-controllerThread :: MVar (Bloom ByteString) -> AcidState BrockmanConfig -> IO ()
-controllerThread bloom configState = do
-  config@BrockmanConfig{configBots, configController} <- query configState GetConfig
+update :: MVar BrockmanConfig -> (BrockmanConfig -> BrockmanConfig) -> IO ()
+update stateMVar function = modifyMVar_ stateMVar $ \state ->
+  let state' = function state
+   in state' <$ dump state'
+  where
+    dump config = do
+      path <- statePath config
+      BL.writeFile path $ encodePretty config
+
+controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
+controllerThread bloom configMVar = do
+  config@BrockmanConfig{configBots, configController} <- readMVar configMVar
   forM_ (M.keys configBots) $ \nick ->
-    forkIO $ eloop $ reporterThread bloom configState nick
+    forkIO $ eloop $ reporterThread bloom configMVar nick
   case configController of
     Nothing -> pure ()
     Just ControllerConfig{controllerNick, controllerChannels} ->
@@ -57,7 +68,7 @@ controllerThread bloom configState = do
         speak chan = do
           handshake controllerNick controllerChannels
           forever $ do
-            config@BrockmanConfig{configBots} <- liftIO $ query configState GetConfig
+            config@BrockmanConfig{configBots} <- liftIO (readMVar configMVar)
             command <- liftIO (readChan chan)
             notice controllerNick (show command)
             case command of
@@ -71,19 +82,19 @@ controllerThread bloom configState = do
                   , "remove NICK — tell a bot to commit suicice"
                   ]
               Tick nick tick -> do
-                liftIO $ update configState $ TickNick nick tick
+                liftIO $ update configMVar $ configBotsL.at nick.mapped.botDelayL ?~ tick
                 notice nick ("change tick speed to " <> show tick)
                 broadcast controllerChannels [nick <> " @ " <> T.pack (show tick) <> " seconds"]
               Add nick url -> do
-                liftIO $ update configState $ AddNick nick url controllerChannels
-                _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configState nick
+                liftIO $ update configMVar $ configBotsL.at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botChannels = controllerChannels}
+                _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
                 pure ()
               Remove nick -> do
-                liftIO $ update configState $ RemoveNick nick
+                liftIO $ update configMVar $ configBotsL.at nick .~ Nothing
                 notice nick "remove"
                 broadcast controllerChannels [nick <> " is expected to commit suicide soon"]
               Move nick url -> do
-                liftIO $ update configState $ MoveNick nick url
+                liftIO $ update configMVar $ configBotsL.at nick.mapped.botFeedL .~ url
                 notice nick ("move to " <> T.unpack url)
                 broadcast controllerChannels [nick <> " -> " <> url]
               Pinged serverName -> do
