@@ -34,6 +34,8 @@ data ControllerCommand
 controllerThread :: MVar (Bloom ByteString) -> AcidState BrockmanConfig -> IO ()
 controllerThread bloom configState = do
   config@BrockmanConfig{configBots, configController} <- query configState GetConfig
+  forM_ (M.keys configBots) $ \nick ->
+    forkIO $ eloop $ reporterThread bloom configState nick
   case configController of
     Nothing -> pure ()
     Just ControllerConfig{controllerNick, controllerChannels} ->
@@ -94,7 +96,4 @@ controllerThread bloom configState = do
                       T.unwords $ [botFeed, T.pack (show botChannels)] ++ maybeToList (T.pack . show <$> botDelay)
                     _ | nick == controllerNick -> "https://github.com/kmein/brockman"
                       | otherwise -> nick <> "? Never heard of him."
-       in do
-         forM_ (M.keys configBots) $ \nick ->
-           forkIO $ eloop $ reporterThread bloom configState nick
-         withIrcConnection config listen speak
+       in withIrcConnection config listen speak
