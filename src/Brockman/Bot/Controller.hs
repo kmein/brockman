@@ -1,7 +1,7 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase, NamedFieldPuns #-}
 module Brockman.Bot.Controller where
 
-import Brockman.Bot (handshake, withIrcConnection)
+import Brockman.Bot
 import Brockman.Bot.Reporter (reporterThread)
 import Brockman.Types
 import Brockman.Util (notice, debug, eloop)
@@ -26,7 +26,7 @@ data ControllerCommand
   = Info (IRC.NickName T.Text)
   | Pinged (IRC.ServerName ByteString)
   | Move (IRC.NickName T.Text) T.Text
-  | Add (IRC.NickName T.Text) T.Text
+  | Add (IRC.NickName T.Text) (IRC.ChannelName T.Text)
   | Remove (IRC.NickName T.Text)
   | Tick (IRC.NickName T.Text) Int
   | Help
@@ -34,14 +34,14 @@ data ControllerCommand
 
 controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
 controllerThread bloom configMVar = do
-  config@BrockmanConfig{..} <- readMVar configMVar
+  config@BrockmanConfig{configBots, configController} <- readMVar configMVar
   case configController of
     Nothing -> pure ()
-    Just controller ->
+    Just ControllerConfig{controllerNick, controllerChannels} ->
       let
         listen chan = forever $ await >>= \case
           Just (Right (IRC.Event _ _ (IRC.Privmsg _ (Right message)))) ->
-            case T.words <$> T.stripPrefix (controllerNick controller <> ":") (decodeUtf8 message) of
+            case T.words <$> T.stripPrefix (controllerNick <> ":") (decodeUtf8 message) of
               Just ["help"] -> liftIO $ writeChan chan Help
               Just ["info", nick] -> liftIO $ writeChan chan (Info nick)
               Just ["move", nick, url] -> liftIO $ writeChan chan (Move nick url)
@@ -53,52 +53,47 @@ controllerThread bloom configMVar = do
               _ -> pure ()
           _ -> pure ()
         speak chan = do
-          handshake (controllerNick controller) (controllerChannels controller)
+          handshake controllerNick controllerChannels
           forever $ do
-            config@BrockmanConfig{..} <- liftIO (readMVar configMVar)
+            config@BrockmanConfig{configBots} <- liftIO (readMVar configMVar)
             command <- liftIO (readChan chan)
-            notice (controllerNick controller) (show command)
+            notice controllerNick (show command)
             case command of
               Help -> do
-                forM_ (controllerChannels controller) $ \channel -> do
-                  mapM (yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8)
-                    [ "help — send this helpful message"
-                    , "info NICK — display a bot's settings"
-                    , "move NICK FEED_URL — change a bot's feed url"
-                    , "tick NICK SECONDS — change a bot's tick speed"
-                    , "add NICK FEED_URL — add a new bot to all channels I am in"
-                    , "remove NICK — tell a bot to commit suicice"
-                    ]
+                broadcast controllerChannels
+                  [ "help — send this helpful message"
+                  , "info NICK — display a bot's settings"
+                  , "move NICK FEED_URL — change a bot's feed url"
+                  , "tick NICK SECONDS — change a bot's tick speed"
+                  , "add NICK FEED_URL — add a new bot to all channels I am in"
+                  , "remove NICK — tell a bot to commit suicice"
+                  ]
               Tick nick tick -> do
                 liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick.mapped.botDelayL ?~ tick)
                 notice nick ("change tick speed to " <> show tick)
-                forM_ (controllerChannels controller) $ \channel ->
-                  yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8 $ nick <> " @ " <> T.pack (show tick) <> " seconds"
+                broadcast controllerChannels [nick <> " @ " <> T.pack (show tick) <> " seconds"]
               Add nick url -> do
-                liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botChannels = controllerChannels controller})
+                liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botChannels = controllerChannels})
                 liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
                 pure ()
               Remove nick -> do
                 liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick .~ Nothing)
                 notice nick "remove"
-                forM_ (controllerChannels controller) $ \channel ->
-                  yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8 $ nick <> " is expected to commit suicide soon"
+                broadcast controllerChannels [nick <> " is expected to commit suicide soon"]
               Move nick url -> do
                 liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick.mapped.botFeedL .~ url)
                 notice nick ("move to " <> T.unpack url)
-                forM_ (controllerChannels controller) $ \channel ->
-                  yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8 $ nick <> " -> " <> url
+                broadcast controllerChannels [nick <> " -> " <> url]
               Pinged serverName -> do
-                debug (controllerNick controller) ("pong " <> show serverName)
+                debug controllerNick ("pong " <> show serverName)
                 yield $ IRC.Pong serverName
               Info nick -> do
-                forM_ (controllerChannels controller) $ \channel ->
-                  yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8 $
-                    case M.lookup nick configBots of
-                      Just BotConfig{..} -> do
-                        T.unwords $ [botFeed, T.pack (show botChannels)] ++ maybeToList (T.pack . show <$> botDelay)
-                      _ | nick == controllerNick controller -> "https://github.com/kmein/brockman"
-                        | otherwise -> nick <> "? Never heard of him."
+                broadcast controllerChannels $ pure $
+                  case M.lookup nick configBots of
+                    Just BotConfig{botFeed, botChannels, botDelay} -> do
+                      T.unwords $ [botFeed, T.pack (show botChannels)] ++ maybeToList (T.pack . show <$> botDelay)
+                    _ | nick == controllerNick -> "https://github.com/kmein/brockman"
+                      | otherwise -> nick <> "? Never heard of him."
        in do
          _ <- forkIO $ withIrcConnection config listen speak
          forConcurrently_ (M.keys configBots) $ \nick ->

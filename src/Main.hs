@@ -1,5 +1,4 @@
-{-# LANGUAGE ApplicativeDo, FlexibleContexts, OverloadedStrings,
-  RecordWildCards, ScopedTypeVariables #-}
+{-# LANGUAGE ApplicativeDo, FlexibleContexts, OverloadedStrings, ScopedTypeVariables #-}
 
 import           Control.Concurrent.MVar
 import           Control.Monad                  ( forever )
@@ -42,7 +41,7 @@ main = do
     (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
   configJSON <- LBS8.readFile configFile
   case eitherDecode configJSON of
-    Right config@BrockmanConfig {..} -> do
+    Right config -> do
       debug "" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- newMVar bloom0

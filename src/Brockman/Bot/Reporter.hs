@@ -1,19 +1,19 @@
-{-# LANGUAGE LambdaCase, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE LambdaCase, NamedFieldPuns, OverloadedStrings #-}
 module Brockman.Bot.Reporter where
 
-import Brockman.Bot (handshake, withIrcConnection)
+import Brockman.Bot
 import Brockman.Feed
 import Brockman.Types
 import Brockman.Util
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
-import Control.Monad (forM_, unless, forever, when)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad (unless, forever, when)
+import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.BloomFilter (Bloom)
 import Data.Conduit
 import Data.Maybe (fromMaybe)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Data.Text.Encoding (decodeUtf8)
 import Control.Lens
 import Network.HTTP.Client (HttpExceptionContent(ConnectionFailure, StatusCodeException), HttpException(HttpExceptionRequest))
 import Network.Socket (HostName)
@@ -33,38 +33,31 @@ data ReporterMessage
   | NewFeedItem FeedItem
   | Exception T.Text
 
-
-currentBotConfig :: T.Text -> MVar BrockmanConfig -> IO (Maybe BotConfig)
-currentBotConfig nick configMVar = do
-  BrockmanConfig{..} <- readMVar configMVar
-  return $ M.lookup nick configBots
-
+-- return the current config or kill thread if the key is not present
+withCurrentBotConfig :: MonadIO m => T.Text -> MVar BrockmanConfig -> (BotConfig -> m ()) -> m ()
+withCurrentBotConfig nick configMVar handler = do
+  BrockmanConfig{configBots} <- liftIO $ readMVar configMVar
+  maybe (liftIO suicide) handler $ M.lookup nick configBots
 
 reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> T.Text -> IO ()
 reporterThread bloom configMVar nick = do
-  config@BrockmanConfig{..} <- readMVar configMVar
+  config@BrockmanConfig{configShortener} <- readMVar configMVar
   withIrcConnection config listenForPing $ \chan -> do
-    liftIO (currentBotConfig nick configMVar) >>= \case
-      Nothing -> liftIO suicide
-      Just BotConfig {..} -> do
-        handshake nick botChannels
-        _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
-        forever $ do
-          liftIO (currentBotConfig nick configMVar) >>= \case
-            Nothing -> liftIO suicide
-            Just BotConfig{..} ->
-              liftIO (readChan chan) >>= \case
-                Pinged serverName -> do
-                  debug nick ("pong " <> show serverName)
-                  yield $ IRC.Pong serverName
-                NewFeedItem item -> do
-                   item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
-                   notice nick ("sending " <> show (display item'))
-                   forM_ botChannels $ \channel ->
-                      yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
-                Exception message ->
-                  forM_ botChannels $ \channel ->
-                    yield $ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
+    withCurrentBotConfig nick configMVar $ \BotConfig{botChannels} -> do
+      handshake nick botChannels
+      _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
+      forever $
+        withCurrentBotConfig nick configMVar $ \BotConfig{botChannels} ->
+          liftIO (readChan chan) >>= \case
+            Pinged serverName -> do
+              debug nick ("pong " <> show serverName)
+              yield $ IRC.Pong serverName
+            NewFeedItem item -> do
+               item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
+               notice nick ("sending " <> show (display item'))
+               broadcast botChannels [display item']
+            Exception message ->
+              broadcast botChannels [message]
   where
     listenForPing chan = forever $ do
       maybeMessage <- await
@@ -76,9 +69,8 @@ reporterThread bloom configMVar nick = do
 
 
 feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
-feedThread nick configMVar isFirstTime bloom chan = currentBotConfig nick configMVar >>= \case
-  Nothing -> pure ()
-  Just BotConfig{..} -> do
+feedThread nick configMVar isFirstTime bloom chan =
+  withCurrentBotConfig nick configMVar $ \BotConfig{botDelay, botFeed} -> do
     let delaySeconds = fromMaybe 300 botDelay
     liftIO $ when isFirstTime $ do
       randomDelay <- randomRIO (0, delaySeconds)
