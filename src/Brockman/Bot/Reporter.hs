@@ -23,6 +23,7 @@ import Text.Feed.Import (parseFeedSource)
 import qualified Control.Exception as E
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
+import qualified Data.Map as M
 import qualified Data.Text as T (Text, pack, unpack, words, unwords)
 import qualified Network.IRC.Conduit as IRC
 
@@ -33,24 +34,37 @@ data ReporterMessage
   | Exception T.Text
 
 
-reporterThread :: MVar (Bloom BS.ByteString) -> T.Text -> BotConfig -> BrockmanConfig -> IO ()
-reporterThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} =
+currentBotConfig :: T.Text -> MVar BrockmanConfig -> IO (Maybe BotConfig)
+currentBotConfig nick configMVar = do
+  BrockmanConfig{..} <- readMVar configMVar
+  return $ M.lookup nick configBots
+
+
+reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> T.Text -> IO ()
+reporterThread bloom configMVar nick = do
+  config@BrockmanConfig{..} <- readMVar configMVar
   withIrcConnection config listenForPing $ \chan -> do
-    handshake nick botChannels
-    _ <- liftIO $ forkIO $ feedThread bot True bloom chan
-    forever $
-      liftIO (readChan chan) >>= \case
-        Pinged serverName -> do
-          debug botFeed ("pong " <> show serverName)
-          yield $ IRC.Pong serverName
-        NewFeedItem item -> do
-           item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
-           notice botFeed ("sending " <> show (display item'))
-           forM_ botChannels $ \channel ->
-              yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
-        Exception message ->
-          forM_ botChannels $ \channel ->
-            yield $ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
+    liftIO (currentBotConfig nick configMVar) >>= \case
+      Nothing -> pure ()
+      Just BotConfig {..} -> do
+        handshake nick botChannels
+        _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
+        forever $ do
+          liftIO (currentBotConfig nick configMVar) >>= \case
+            Nothing -> pure ()
+            Just BotConfig{..} ->
+              liftIO (readChan chan) >>= \case
+                Pinged serverName -> do
+                  debug botFeed ("pong " <> show serverName)
+                  yield $ IRC.Pong serverName
+                NewFeedItem item -> do
+                   item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
+                   notice botFeed ("sending " <> show (display item'))
+                   forM_ botChannels $ \channel ->
+                      yield $ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 $ display item'
+                Exception message ->
+                  forM_ botChannels $ \channel ->
+                    yield $ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
   where
     listenForPing chan = forever $ do
       maybeMessage <- await
@@ -61,8 +75,10 @@ reporterThread bloom nick bot@BotConfig {..} config@BrockmanConfig {..} =
         _ -> pure ()
 
 
-feedThread :: BotConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
-feedThread bot@BotConfig {..} isFirstTime bloom chan = do
+feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
+feedThread nick configMVar isFirstTime bloom chan = currentBotConfig nick configMVar >>= \case
+  Nothing -> pure ()
+  Just bot@BotConfig{..} -> do
     let delaySeconds = fromMaybe 300 botDelay
     liftIO $ when isFirstTime $ do
       randomDelay <- randomRIO (0, delaySeconds)
@@ -93,7 +109,7 @@ feedThread bot@BotConfig {..} isFirstTime bloom chan = do
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
     liftIO $ sleepSeconds delaySeconds
     debug botFeed "tick"
-    feedThread bot False bloom chan
+    feedThread nick configMVar False bloom chan
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do

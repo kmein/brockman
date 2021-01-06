@@ -49,6 +49,7 @@ main = do
       debug "" (show config)
       let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
       bloom <- newMVar bloom0
-      eloop $ controllerThread bloom config
+      configMVar <- newMVar config
+      eloop $ controllerThread bloom configMVar
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err
