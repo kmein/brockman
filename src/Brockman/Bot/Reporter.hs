@@ -8,13 +8,13 @@ import Brockman.Util
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
+import Control.Lens
 import Control.Monad (unless, forever, when)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.BloomFilter (Bloom)
 import Data.Conduit
 import Data.Maybe (fromMaybe)
 import Data.Text.Encoding (decodeUtf8)
-import Control.Lens
 import Network.HTTP.Client (HttpExceptionContent(ConnectionFailure, StatusCodeException), HttpException(HttpExceptionRequest))
 import Network.Socket (HostName)
 import Network.Wreq (FormParam((:=)), get, post, responseBody, responseStatus, statusCode, statusMessage)

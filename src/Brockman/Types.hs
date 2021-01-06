@@ -2,15 +2,15 @@
 
 module Brockman.Types where
 
+import Control.Lens
 import Data.Aeson hiding ((.=))
 import Data.Char (isLower, toLower)
 import Data.Map (Map)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Control.Lens
-import System.FilePath ((</>))
 import System.Directory (getHomeDirectory)
+import System.FilePath ((</>))
 
 configBotsL :: Lens' BrockmanConfig (Map Text BotConfig)
 configBotsL = lens configBots (\config bots -> config { configBots = bots })
@@ -24,7 +24,7 @@ botDelayL = lens botDelay (\bot delay -> bot { botDelay = delay })
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Text BotConfig
   , configUseTls :: Maybe Bool
-  , configIrc :: IRCConfig
+  , configIrc :: IrcConfig
   , configShortener :: Maybe Text
   , configController :: Maybe ControllerConfig
   , configStatePath :: Maybe FilePath
@@ -35,7 +35,7 @@ data ControllerConfig = ControllerConfig
   , controllerChannels :: [Text]
   } deriving (Generic, Show, Typeable)
 
-data IRCConfig = IrcConfig
+data IrcConfig = IrcConfig
   { ircHost :: Text
   , ircPort :: Maybe Int
   } deriving (Generic, Show, Typeable)
@@ -67,7 +67,7 @@ instance FromJSON BrockmanConfig where
 instance FromJSON BotConfig where
   parseJSON = genericParseJSON myOptions
 
-instance FromJSON IRCConfig where
+instance FromJSON IrcConfig where
   parseJSON = genericParseJSON myOptions
 
 instance FromJSON ControllerConfig where
@@ -79,7 +79,7 @@ instance ToJSON BrockmanConfig where
 instance ToJSON BotConfig where
   toJSON = genericToJSON myOptions
 
-instance ToJSON IRCConfig where
+instance ToJSON IrcConfig where
   toJSON = genericToJSON myOptions
 
 instance ToJSON ControllerConfig where

@@ -2,29 +2,16 @@
 
 module Brockman.Feed where
 
-import           Control.Concurrent.MVar
-import           Data.BloomFilter               ( Bloom )
-import qualified Data.BloomFilter              as Bloom
-                                                ( insertList
-                                                , notElem
-                                                )
-import qualified Data.ByteString               as BS
-                                                ( ByteString )
-import           Data.Maybe                     ( fromMaybe )
-import           Data.Text                      ( Text
-                                                , pack
-                                                , strip
-                                                , unwords
-                                                )
-import qualified Data.Text.Encoding            as Text
-                                                ( encodeUtf8 )
-import qualified Text.Atom.Feed                as Atom
-import qualified Text.Feed.Types               as Feed
-                                                ( Feed(..) )
-import           Text.RSS.Syntax                ( RSSItem(..)
-                                                , rssChannel
-                                                , rssItems
-                                                )
+import Control.Concurrent.MVar
+import Data.BloomFilter (Bloom)
+import Data.Maybe (fromMaybe)
+import Data.Text (Text, pack, strip, unwords)
+import Text.RSS.Syntax (RSSItem(..), rssChannel, rssItems)
+import qualified Data.BloomFilter as Bloom (insertList, notElem)
+import qualified Data.ByteString as BS (ByteString)
+import qualified Data.Text.Encoding as Text (encodeUtf8)
+import qualified Text.Atom.Feed as Atom
+import qualified Text.Feed.Types as Feed (Feed(..))
 
 data FeedItem = FeedItem
   { itemTitle :: Text

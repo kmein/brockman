@@ -1,30 +1,21 @@
 {-# LANGUAGE ApplicativeDo, FlexibleContexts, OverloadedStrings, ScopedTypeVariables #-}
 
-import           Brockman.Types
-import           Control.Concurrent.MVar
-import           Control.Monad                  ( forever )
-import           Data.Aeson
-import qualified Data.BloomFilter              as Bloom
-                                                ( fromList )
-import           Data.BloomFilter.Hash          ( cheapHashes )
-import qualified Data.ByteString.Lazy.Char8    as LBS8
-                                                ( readFile )
-import           Data.Maybe                     ( fromMaybe )
-import           Options.Applicative
-import           System.Environment             ( lookupEnv )
-import           System.Directory               ( doesFileExist )
-import           System.IO                      ( hSetBuffering
-                                                , stderr
-                                                , BufferMode(LineBuffering)
-                                                )
-import           System.Log.Logger
-import           Text.Read
-
-import           Brockman.Bot.Controller        ( controllerThread )
-import           Brockman.Util                  ( eloop
-                                                , sleepSeconds
-                                                , debug
-                                                )
+import Brockman.Bot.Controller (controllerThread)
+import Brockman.Types
+import Brockman.Util (eloop, sleepSeconds, debug)
+import Control.Concurrent.MVar
+import Control.Monad (forever)
+import Data.Aeson
+import Data.BloomFilter.Hash (cheapHashes)
+import Data.Maybe (fromMaybe)
+import Options.Applicative
+import System.Directory (doesFileExist)
+import System.Environment (lookupEnv)
+import System.IO (hSetBuffering, stderr, BufferMode(LineBuffering))
+import System.Log.Logger
+import Text.Read
+import qualified Data.BloomFilter as Bloom (fromList)
+import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile)
 
 brockmanOptions :: Parser FilePath
 brockmanOptions =

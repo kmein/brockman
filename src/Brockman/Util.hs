@@ -2,17 +2,11 @@
 
 module Brockman.Util where
 
-import           Control.Concurrent             ( threadDelay, killThread, myThreadId )
-import           Control.Exception              ( SomeException
-                                                , handle
-                                                )
-import           Control.Monad.IO.Class         ( MonadIO(..)
-                                                , liftIO
-                                                )
-import           Data.Text                      ( Text
-                                                , unpack
-                                                )
-import           System.Log.Logger
+import Control.Concurrent (threadDelay, killThread, myThreadId)
+import Control.Exception (SomeException, handle)
+import Control.Monad.IO.Class (MonadIO(..), liftIO)
+import Data.Text (Text, unpack)
+import System.Log.Logger
 
 eloop :: IO a -> IO a
 eloop x = handle @SomeException
