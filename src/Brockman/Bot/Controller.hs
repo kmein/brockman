@@ -40,6 +40,7 @@ controllerThread bloom configState = do
     Just ControllerConfig{controllerNick, controllerChannels} ->
       let
         listen chan = forever $ await >>= \case
+          Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
           Just (Right (IRC.Event _ _ (IRC.Privmsg _ (Right message)))) ->
             case T.words <$> T.stripPrefix (controllerNick <> ":") (decodeUtf8 message) of
               Just ["help"] -> liftIO $ writeChan chan Help

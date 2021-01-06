@@ -60,12 +60,9 @@ reporterThread bloom configState nick = do
             Exception message ->
               broadcastNotice botChannels message
   where
-    listenForPing chan = forever $ do
-      maybeMessage <- await
-      case maybeMessage of
-        Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> do
-          debug "" ("Pinged by " <> show s)
-          liftIO $ writeChan chan (Pinged s)
+    listenForPing chan =
+      forever $ await >>= \case
+        Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
         _ -> pure ()
 
 
