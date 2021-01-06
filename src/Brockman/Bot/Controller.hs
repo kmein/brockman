@@ -23,12 +23,14 @@ import qualified Data.Text as T
 import qualified Network.IRC.Conduit as IRC
 
 data ControllerCommand
-  = Info T.Text
+  = Info (IRC.NickName T.Text)
   | Pinged (IRC.ServerName ByteString)
-  | Move T.Text T.Text
-  | Add T.Text T.Text
-  | Tick T.Text Int
+  | Move (IRC.NickName T.Text) T.Text
+  | Add (IRC.NickName T.Text) T.Text
+  | Remove (IRC.NickName T.Text)
+  | Tick (IRC.NickName T.Text) Int
   | Help
+  deriving (Show)
 
 controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
 controllerThread bloom configMVar = do
@@ -44,6 +46,7 @@ controllerThread bloom configMVar = do
               ["info", nick] -> liftIO $ writeChan chan (Info nick)
               ["move", nick, url] -> liftIO $ writeChan chan (Move nick url)
               ["add", nick, url] -> liftIO $ writeChan chan (Add nick url)
+              ["remove", nick] -> liftIO $ writeChan chan (Remove nick)
               ["tick", nick, tickString]
                 | Just tick <- readMay (T.unpack tickString) -> liftIO $ writeChan chan (Tick nick tick)
               _ -> pure ()
@@ -52,7 +55,9 @@ controllerThread bloom configMVar = do
           handshake (controllerNick controller) (controllerChannels controller)
           forever $ do
             config@BrockmanConfig{..} <- liftIO (readMVar configMVar)
-            liftIO (readChan chan) >>= \case
+            command <- liftIO (readChan chan)
+            notice (controllerNick controller) (show command)
+            case command of
               Help -> do
                 forM_ (controllerChannels controller) $ \channel ->
                   mapM (yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8)
@@ -61,19 +66,25 @@ controllerThread bloom configMVar = do
                     , "move NICK FEED_URL — change a bot's feed url"
                     , "tick NICK SECONDS — change a bot's tick speed"
                     , "add NICK FEED_URL — add a new bot to all channels I am in"
+                    , "remove NICK — tell a bot to commit suicice"
                     ]
               Tick nick tick -> do
                 liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick.mapped.botDelayL ?~ tick)
-                liftIO $ notice nick ("change tick speed to " <> show tick)
+                notice nick ("change tick speed to " <> show tick)
                 forM_ (controllerChannels controller) $ \channel ->
                   yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8 $ nick <> " @ " <> T.pack (show tick) <> " seconds"
               Add nick url -> do
                 liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botChannels = controllerChannels controller})
                 liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
                 pure ()
+              Remove nick -> do
+                liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick .~ Nothing)
+                notice nick "remove"
+                forM_ (controllerChannels controller) $ \channel ->
+                  yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8 $ nick <> " is expected to commit suicide soon"
               Move nick url -> do
                 liftIO $ modifyMVar_ configMVar $ pure . (configBotsL.at nick.mapped.botFeedL .~ url)
-                liftIO $ notice nick ("move to " <> T.unpack url)
+                notice nick ("move to " <> T.unpack url)
                 forM_ (controllerChannels controller) $ \channel ->
                   yield . IRC.Privmsg (encodeUtf8 channel) . Right . encodeUtf8 $ nick <> " -> " <> url
               Pinged serverName -> do

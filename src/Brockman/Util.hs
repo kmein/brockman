@@ -2,7 +2,7 @@
 
 module Brockman.Util where
 
-import           Control.Concurrent             ( threadDelay )
+import           Control.Concurrent             ( threadDelay, killThread, myThreadId )
 import           Control.Exception              ( SomeException
                                                 , handle
                                                 )
@@ -36,3 +36,6 @@ notice botFeed message =
 debug :: MonadIO m => Text -> String -> m ()
 debug botFeed message =
   liftIO $ debugM "brockman" ("[" <> unpack botFeed <> "] " <> message)
+
+suicide :: IO ()
+suicide = killThread =<< myThreadId

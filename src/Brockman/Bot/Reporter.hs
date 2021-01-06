@@ -4,7 +4,7 @@ module Brockman.Bot.Reporter where
 import Brockman.Bot (handshake, withIrcConnection)
 import Brockman.Feed
 import Brockman.Types
-import Brockman.Util (sleepSeconds, debug, notice)
+import Brockman.Util
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
@@ -45,13 +45,13 @@ reporterThread bloom configMVar nick = do
   config@BrockmanConfig{..} <- readMVar configMVar
   withIrcConnection config listenForPing $ \chan -> do
     liftIO (currentBotConfig nick configMVar) >>= \case
-      Nothing -> pure ()
+      Nothing -> liftIO suicide
       Just BotConfig {..} -> do
         handshake nick botChannels
         _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
         forever $ do
           liftIO (currentBotConfig nick configMVar) >>= \case
-            Nothing -> pure ()
+            Nothing -> liftIO suicide
             Just BotConfig{..} ->
               liftIO (readChan chan) >>= \case
                 Pinged serverName -> do
