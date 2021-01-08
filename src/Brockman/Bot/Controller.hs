@@ -7,7 +7,7 @@ module Brockman.Bot.Controller where
 import Brockman.Bot
 import Brockman.Bot.Reporter (reporterThread)
 import Brockman.Types
-import Brockman.Util (debug, eloop, notice)
+import Brockman.Util (debug, eloop, notice, decodeUtf8)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
@@ -21,7 +21,6 @@ import Data.List (delete, insert)
 import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8)
 import qualified Network.IRC.Conduit as IRC
 import Safe (readMay)
 

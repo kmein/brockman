@@ -23,7 +23,7 @@ import Data.List (delete, insert)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest), HttpExceptionContent (ConnectionFailure, StatusCodeException))
 import qualified Network.IRC.Conduit as IRC
 import Network.Socket (HostName)

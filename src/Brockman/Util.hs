@@ -5,7 +5,9 @@ module Brockman.Util where
 import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
 import Control.Monad.IO.Class (MonadIO (..), liftIO)
+import Data.ByteString (ByteString)
 import Data.Text (Text, unpack)
+import Data.Text.Encoding (decodeUtf8With)
 import System.Log.Logger
 
 eloop :: IO a -> IO a
@@ -34,3 +36,6 @@ debug botFeed message =
 
 suicide :: IO ()
 suicide = killThread =<< myThreadId
+
+decodeUtf8 :: ByteString -> Text
+decodeUtf8 = decodeUtf8With $ \_error _ -> Just '?'
