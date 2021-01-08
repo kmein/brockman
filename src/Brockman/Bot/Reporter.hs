@@ -76,13 +76,14 @@ reporterThread bloom configMVar nick = do
               liftIO $ update configMVar $ configBotsL . at nick . mapped . botChannelsL %~ insert channel'
               notice nick $ "invited to " <> T.unpack channel'
               yield $ IRC.Join channel
+            _ -> notice nick "Cannot handle command."
   where
     listen chan =
       forever $
         await >>= \case
           Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
           Just (Right (IRC.Event _ _ (IRC.Invite channel _))) -> liftIO $ writeChan chan (Invited channel)
-          Just (Right (IRC.Event _ _ (IRC.Kick channel _ _))) -> liftIO $ writeChan chan (Kicked channel)
+          Just (Right (IRC.Event _ _ (IRC.Kick channel nick' _))) | nick == decodeUtf8 nick' -> liftIO $ writeChan chan (Kicked channel)
           _ -> pure ()
 
 feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()

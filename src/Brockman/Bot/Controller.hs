@@ -48,7 +48,7 @@ controllerThread bloom configMVar = do
             forever $
               await >>= \case
                 Just (Right (IRC.Event _ _ (IRC.Invite channel _))) -> liftIO $ writeChan chan (Invite channel)
-                Just (Right (IRC.Event _ _ (IRC.Kick channel _ _))) -> liftIO $ writeChan chan (Kick channel)
+                Just (Right (IRC.Event _ _ (IRC.Kick channel nick _))) | decodeUtf8 nick == controllerNick -> liftIO $ writeChan chan (Kick channel)
                 Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
                 Just (Right (IRC.Event _ _ (IRC.Privmsg channel (Right message)))) ->
                   case T.words <$> T.stripPrefix (controllerNick <> ":") (decodeUtf8 message) of
