@@ -8,7 +8,7 @@ import Data.BloomFilter (Bloom)
 import qualified Data.BloomFilter as Bloom (insertList, notElem)
 import qualified Data.ByteString as BS (ByteString)
 import Data.Maybe (fromMaybe)
-import Data.Text (Text, pack, strip, unwords)
+import Data.Text (Text, pack, strip, unwords, lines, intercalate)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import qualified Text.Atom.Feed as Atom
 import qualified Text.Feed.Types as Feed (Feed (..))
@@ -21,7 +21,7 @@ data FeedItem = FeedItem
   deriving (Show)
 
 display :: FeedItem -> Text
-display item = Data.Text.unwords [strip $ itemLink item, strip $ itemTitle item]
+display item = Data.Text.unwords [strip $ itemLink item, strip $ Data.Text.intercalate " | " $ Data.Text.lines $ itemTitle item]
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
 feedToItems = \case
