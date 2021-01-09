@@ -19,7 +19,6 @@ import Data.BloomFilter (Bloom)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
 import Data.Conduit
-import Data.List (delete, insert)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
@@ -47,14 +46,15 @@ withCurrentBotConfig nick configMVar handler = do
 
 reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> T.Text -> IO ()
 reporterThread bloom configMVar nick = do
-  config@BrockmanConfig {configShortener} <- readMVar configMVar
+  config@BrockmanConfig {configChannel, configShortener} <- readMVar configMVar
   withIrcConnection config listen $ \chan -> do
-    withCurrentBotConfig nick configMVar $ \BotConfig {botChannels} -> do
-      handshake nick botChannels
+    withCurrentBotConfig nick configMVar $ \BotConfig {botExtraChannels} -> do
+      handshake nick (configChannel : fromMaybe [] botExtraChannels)
       yield $ IRC.Mode (encodeUtf8 nick) False [] ["+D"] -- deafen to PRIVMSGs
       _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
       forever $
-        withCurrentBotConfig nick configMVar $ \BotConfig {botChannels} -> do
+        withCurrentBotConfig nick configMVar $ \BotConfig {botExtraChannels} -> do
+          let botChannels = configChannel : fromMaybe [] botExtraChannels
           command <- liftIO (readChan chan)
           notice nick $ show command
           case command of
@@ -69,14 +69,13 @@ reporterThread bloom configMVar nick = do
               broadcastNotice botChannels message
             Kicked channel -> do
               let channel' = decodeUtf8 channel
-              liftIO $ update configMVar $ configBotsL . at nick . mapped . botChannelsL %~ delete channel'
+              liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ delete channel'
               notice nick $ "kicked from " <> T.unpack channel'
             Invited channel -> do
               let channel' = decodeUtf8 channel
-              liftIO $ update configMVar $ configBotsL . at nick . mapped . botChannelsL %~ insert channel'
+              liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ insert channel'
               notice nick $ "invited to " <> T.unpack channel'
               yield $ IRC.Join channel
-            _ -> notice nick "Cannot handle command."
   where
     listen chan =
       forever $

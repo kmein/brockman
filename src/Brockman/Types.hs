@@ -23,8 +23,8 @@ configBotsL = lens configBots (\config bots -> config {configBots = bots})
 configControllerL :: Lens' BrockmanConfig (Maybe ControllerConfig)
 configControllerL = lens configController (\config controller -> config {configController = controller})
 
-controllerChannelsL :: Lens' ControllerConfig [Text]
-controllerChannelsL = lens controllerChannels (\controller channels -> controller {controllerChannels = channels})
+controllerExtraChannelsL :: Lens' ControllerConfig (Maybe [Text])
+controllerExtraChannelsL = lens controllerExtraChannels (\controller channels -> controller {controllerExtraChannels = channels})
 
 botFeedL :: Lens' BotConfig Text
 botFeedL = lens botFeed (\bot feed -> bot {botFeed = feed})
@@ -32,11 +32,12 @@ botFeedL = lens botFeed (\bot feed -> bot {botFeed = feed})
 botDelayL :: Lens' BotConfig (Maybe Int)
 botDelayL = lens botDelay (\bot delay -> bot {botDelay = delay})
 
-botChannelsL :: Lens' BotConfig [Text]
-botChannelsL = lens botChannels (\bot channels -> bot {botChannels = channels})
+botExtraChannelsL :: Lens' BotConfig (Maybe [Text])
+botExtraChannelsL = lens botExtraChannels (\bot channels -> bot {botExtraChannels = channels})
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Text BotConfig,
+    configChannel :: Text,
     configUseTls :: Maybe Bool,
     configIrc :: IrcConfig,
     configShortener :: Maybe Text,
@@ -47,7 +48,7 @@ data BrockmanConfig = BrockmanConfig
 
 data ControllerConfig = ControllerConfig
   { controllerNick :: Text,
-    controllerChannels :: [Text]
+    controllerExtraChannels :: Maybe [Text]
   }
   deriving (Generic, Show, Typeable)
 
@@ -59,7 +60,7 @@ data IrcConfig = IrcConfig
 
 data BotConfig = BotConfig
   { botFeed :: Text,
-    botChannels :: [Text],
+    botExtraChannels :: Maybe [Text],
     botDelay :: Maybe Int
   }
   deriving (Generic, Show, Typeable)

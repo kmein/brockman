@@ -6,6 +6,7 @@ import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
 import Control.Monad.IO.Class (MonadIO (..), liftIO)
 import Data.ByteString (ByteString)
+import Data.List (insert, delete)
 import Data.Text (Text, unpack)
 import Data.Text.Encoding (decodeUtf8With)
 import System.Log.Logger
@@ -39,3 +40,14 @@ suicide = killThread =<< myThreadId
 
 decodeUtf8 :: ByteString -> Text
 decodeUtf8 = decodeUtf8With $ \_error _ -> Just '?'
+
+insert :: Ord a => a -> Maybe [a] -> Maybe [a]
+insert value list = case Data.List.insert value <$> list of
+  Nothing -> Just [value]
+  Just xs -> Just xs
+
+delete :: Ord a => a -> Maybe [a] -> Maybe [a]
+delete value list = case Data.List.delete value <$> list of
+  Nothing -> Nothing
+  Just [] -> Nothing
+  Just xs -> Just xs
