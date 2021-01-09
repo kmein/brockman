@@ -16,6 +16,7 @@ import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import Data.BloomFilter (Bloom)
 import Data.ByteString (ByteString)
+import Data.Char (isAlphaNum)
 import Data.Conduit
 import qualified Data.Map as M
 import Data.Maybe
@@ -55,8 +56,9 @@ controllerThread bloom configMVar = do
                     Just ["help"] -> liftIO $ writeChan chan (Help (decodeUtf8 channel))
                     Just ["info", nick] -> liftIO $ writeChan chan (Info (decodeUtf8 channel) nick)
                     Just ["move", nick, url] -> liftIO $ writeChan chan (Move nick url)
-                    Just ["add", nick, url] -> liftIO $ writeChan chan $ Add nick url $
-                      if decodeUtf8 channel == configChannel then Nothing else Just channel
+                    Just ["add", nick, url] | "http" `T.isPrefixOf` url && isValidIrcNick nick ->
+                      liftIO $ writeChan chan $ Add nick url $
+                        if decodeUtf8 channel == configChannel then Nothing else Just channel
                     Just ["remove", nick] -> liftIO $ writeChan chan (Remove nick)
                     Just ["tick", nick, tickString]
                       | Just tick <- readMay (T.unpack tickString) -> liftIO $ writeChan chan (Tick nick tick)

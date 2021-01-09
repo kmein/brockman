@@ -6,8 +6,9 @@ import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
 import Control.Monad.IO.Class (MonadIO (..), liftIO)
 import Data.ByteString (ByteString)
+import Data.Char (isAsciiLower, isAsciiUpper)
 import Data.List (insert, delete)
-import Data.Text (Text, unpack)
+import Data.Text (Text, unpack, uncons, all)
 import Data.Text.Encoding (decodeUtf8With)
 import System.Log.Logger
 
@@ -51,3 +52,14 @@ delete value list = case Data.List.delete value <$> list of
   Nothing -> Nothing
   Just [] -> Nothing
   Just xs -> Just xs
+
+-- as defined in https://tools.ietf.org/html/rfc1459#page-9
+isValidIrcNick :: Text -> Bool
+isValidIrcNick nick =
+  case Data.Text.uncons nick of
+    Nothing -> False
+    Just (c, rest) -> isLetter c && Data.Text.all (\c -> isLetter c || isNumber c || isSpecial c) rest
+  where
+    isLetter c = isAsciiLower c || isAsciiUpper c
+    isNumber c = c `elem` "0123456789"
+    isSpecial c = c `elem` "-[]\\`^{}_|" -- '_' and '|' are not in the RFC, but they work
