@@ -60,7 +60,7 @@ isValidIrcNick :: Text -> Bool
 isValidIrcNick nick =
   case Data.Text.uncons nick of
     Nothing -> False
-    Just (c, rest) -> isLetter c && Data.Text.all (\c -> isLetter c || isNumber c || isSpecial c) rest
+    Just (first, rest) -> isLetter first && Data.Text.all (\c -> isLetter c || isNumber c || isSpecial c) rest
   where
     isLetter c = isAsciiLower c || isAsciiUpper c
     isNumber c = c `elem` "0123456789"

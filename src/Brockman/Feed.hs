@@ -7,7 +7,7 @@ import Control.Concurrent.MVar
 import Data.BloomFilter (Bloom)
 import qualified Data.BloomFilter as Bloom (insertList, notElem)
 import qualified Data.ByteString as BS (ByteString)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, pack, strip, unwords, lines, intercalate)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import qualified Text.Atom.Feed as Atom
@@ -26,19 +26,19 @@ display item = Data.Text.unwords [strip $ itemLink item, strip $ Data.Text.inter
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
 feedToItems = \case
   Just (Feed.RSSFeed rss) ->
-    concatMap rssItemToItems (rssItems (rssChannel rss))
+    mapMaybe rssItemToItem (rssItems (rssChannel rss))
   Just (Feed.AtomFeed atom) ->
-    concatMap atomEntryToItems (Atom.feedEntries atom)
+    mapMaybe atomEntryToItem (Atom.feedEntries atom)
   _ -> []
   where
-    atomEntryToItems entry = map (FeedItem title) links
+    atomEntryToItem entry = FeedItem title <$> link
       where
         title = pack $ Atom.txtToString $ Atom.entryTitle entry
-        links = map Atom.linkHref (Atom.entryLinks entry)
-    rssItemToItems item = map (FeedItem title) links
+        link = Atom.linkHref <$> listToMaybe (Atom.entryLinks entry)
+    rssItemToItem item = FeedItem title <$> link
       where
         title = fromMaybe "untitled" (rssItemTitle item)
-        links = maybe [] pure (rssItemLink item)
+        link = rssItemLink item
 
 deduplicate :: MVar (Bloom BS.ByteString) -> [FeedItem] -> IO [FeedItem]
 deduplicate var items =
