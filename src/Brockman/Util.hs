@@ -43,9 +43,11 @@ decodeUtf8 :: ByteString -> Text
 decodeUtf8 = decodeUtf8With $ \_error _ -> Just '?'
 
 insert :: Ord a => a -> Maybe [a] -> Maybe [a]
-insert value list = case Data.List.insert value <$> list of
-  Nothing -> Just [value]
-  Just xs -> Just xs
+insert value list
+  | Just values <- list, value `elem` values = list
+  | otherwise = case Data.List.insert value <$> list of
+    Nothing -> Just [value]
+    Just xs -> Just xs
 
 delete :: Ord a => a -> Maybe [a] -> Maybe [a]
 delete value list = case Data.List.delete value <$> list of
