@@ -4,12 +4,17 @@ module Brockman.Util where
 
 import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
+import Control.Lens
 import Control.Monad.IO.Class (MonadIO (..), liftIO)
+import Data.Aeson (ToJSON(toJSON))
+import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString (ByteString)
+import Data.ByteString.Lazy (toStrict)
 import Data.Char (isAsciiLower, isAsciiUpper)
 import Data.List (insert, delete)
 import Data.Text (Text, unpack, uncons, all)
 import Data.Text.Encoding (decodeUtf8With)
+import Network.Wreq (post, responseBody)
 import System.Log.Logger
 
 eloop :: IO a -> IO a
@@ -65,3 +70,8 @@ isValidIrcNick nick =
     isLetter c = isAsciiLower c || isAsciiUpper c
     isNumber c = c `elem` "0123456789"
     isSpecial c = c `elem` "-[]\\`^{}_|" -- '_' and '|' are not in the RFC, but they work
+
+pasteJson :: ToJSON a => Text -> a -> IO Text
+pasteJson endpoint value = do
+  response <- post (Data.Text.unpack endpoint) . encodePretty $ toJSON value
+  return $ decodeUtf8 $ Data.ByteString.Lazy.toStrict $ response ^. responseBody

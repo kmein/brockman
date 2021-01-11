@@ -42,7 +42,8 @@ data BrockmanConfig = BrockmanConfig
     configIrc :: IrcConfig,
     configShortener :: Maybe Text,
     configController :: Maybe ControllerConfig,
-    configStatePath :: Maybe FilePath
+    configStatePath :: Maybe FilePath,
+    configPastebin :: Maybe Text
   }
   deriving (Generic, Show, Typeable)
 

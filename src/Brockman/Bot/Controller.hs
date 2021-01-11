@@ -35,11 +35,12 @@ data ControllerCommand
   | Help (IRC.ChannelName T.Text)
   | Subscribe (IRC.NickName T.Text) {- subscriber -} (IRC.NickName T.Text) {- bot -}
   | Unsubscribe (IRC.NickName T.Text) {- subscriber -} (IRC.NickName T.Text) {- bot -}
+  | Dump (IRC.ChannelName T.Text)
   deriving (Show)
 
 controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
 controllerThread bloom configMVar = do
-  config@BrockmanConfig {configBots, configController, configChannel} <- readMVar configMVar
+  config@BrockmanConfig {configBots, configController, configChannel, configPastebin} <- readMVar configMVar
   forM_ (M.keys configBots) $ \nick ->
     forkIO $ eloop $ reporterThread bloom configMVar nick
   case configController of
@@ -53,24 +54,26 @@ controllerThread bloom configMVar = do
                 Just (Right (IRC.Event _ _ (IRC.Kick channel nick _))) | decodeUtf8 nick == controllerNick -> liftIO $ writeChan chan (Kick channel)
                 Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
                 Just (Right (IRC.Event _ (IRC.User user) (IRC.Privmsg _ (Right message)))) ->
-                  case T.words $ decodeUtf8 message of
-                    ["subscribe", nick] -> liftIO $ writeChan chan $ Subscribe (decodeUtf8 user) nick
-                    ["unsubscribe", nick] -> liftIO $ writeChan chan $ Unsubscribe (decodeUtf8 user) nick
-                    ["help"] -> liftIO $ writeChan chan (Help (decodeUtf8 user))
-                    ["info", nick] -> liftIO $ writeChan chan (Info (decodeUtf8 user) nick)
+                  liftIO $ case T.words $ decodeUtf8 message of
+                    ["subscribe", nick] -> writeChan chan $ Subscribe (decodeUtf8 user) nick
+                    ["unsubscribe", nick] -> writeChan chan $ Unsubscribe (decodeUtf8 user) nick
+                    ["help"] -> writeChan chan (Help (decodeUtf8 user))
+                    ["info", nick] -> writeChan chan (Info (decodeUtf8 user) nick)
+                    ["dump"] -> writeChan chan (Dump (decodeUtf8 user))
                     _ -> pure ()
                 Just (Right (IRC.Event _ source (IRC.Privmsg channel (Right message)))) ->
-                  case T.words <$> T.stripPrefix (controllerNick <> ":") (decodeUtf8 message) of
-                    Just ["help"] -> liftIO $ writeChan chan (Help (decodeUtf8 channel))
-                    Just ["info", nick] -> liftIO $ writeChan chan (Info (decodeUtf8 channel) nick)
-                    Just ["move", nick, url] -> liftIO $ writeChan chan (Move nick url)
+                  liftIO $ case T.words <$> T.stripPrefix (controllerNick <> ":") (decodeUtf8 message) of
+                    Just ["dump"] -> writeChan chan (Dump (decodeUtf8 channel))
+                    Just ["help"] -> writeChan chan (Help (decodeUtf8 channel))
+                    Just ["info", nick] -> writeChan chan (Info (decodeUtf8 channel) nick)
+                    Just ["move", nick, url] -> writeChan chan (Move nick url)
                     Just ["add", nick, url] | "http" `T.isPrefixOf` url && isValidIrcNick nick ->
-                      liftIO $ writeChan chan $ Add nick url $
+                      writeChan chan $ Add nick url $
                         if decodeUtf8 channel == configChannel then Nothing else Just channel
-                    Just ["remove", nick] -> liftIO $ writeChan chan (Remove nick)
+                    Just ["remove", nick] -> writeChan chan (Remove nick)
                     Just ["tick", nick, tickString]
-                      | Just tick <- readMay (T.unpack tickString) -> liftIO $ writeChan chan (Tick nick tick)
-                    Just _ -> liftIO $ writeChan chan (Help (decodeUtf8 channel))
+                      | Just tick <- readMay (T.unpack tickString) -> writeChan chan (Tick nick tick)
+                    Just _ -> writeChan chan (Help (decodeUtf8 channel))
                     _ -> pure ()
                 _ -> pure ()
           speak chan = do
@@ -93,6 +96,7 @@ controllerThread bloom configMVar = do
                           "tick NICK SECONDS — change a bot's tick speed",
                           "add NICK FEED_URL — add a new bot to all channels I am in",
                           "remove NICK — tell a bot to commit suicice",
+                          "dump — upload the current config/state somewhere you can see it",
                           "/msg " <> controllerNick <> " subscribe NICK — subscribe to private messages from a bot",
                           "/msg " <> controllerNick <> " unsubscribe NICK — unsubscribe to private messages from a bot",
                           "/invite NICK — invite a bot from your channel",
@@ -136,6 +140,13 @@ controllerThread bloom configMVar = do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ delete user
                       notice nick $ T.unpack user <> " has unsubscribed"
                       broadcast [user] ["unsubscribed from " <> nick]
+                    Dump channel ->
+                      case configPastebin of
+                        Just endpoint -> do
+                          url <- liftIO $ pasteJson endpoint config
+                          broadcast [channel] [url]
+                        Nothing ->
+                          broadcast [channel] ["No pastebin set"]
                     Info channel nick -> do
                       broadcast [channel] $
                         pure $
