@@ -61,7 +61,7 @@ controllerThread bloom configMVar = do
                     ["info", nick] -> writeChan chan (Info (decodeUtf8 user) nick)
                     ["dump"] -> writeChan chan (Dump (decodeUtf8 user))
                     _ -> pure ()
-                Just (Right (IRC.Event _ source (IRC.Privmsg channel (Right message)))) ->
+                Just (Right (IRC.Event _ (IRC.Channel channel _) (IRC.Privmsg _ (Right message)))) ->
                   liftIO $ case T.words <$> T.stripPrefix (controllerNick <> ":") (decodeUtf8 message) of
                     Just ["dump"] -> writeChan chan (Dump (decodeUtf8 channel))
                     Just ["help"] -> writeChan chan (Help (decodeUtf8 channel))
