@@ -22,7 +22,7 @@ data FeedItem = FeedItem
   deriving (Show)
 
 display :: FeedItem -> Text
-display item = Data.Text.unwords [strip $ itemLink item, strip $ decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ itemTitle item]
+display item = Data.Text.unwords [strip $ itemLink item, decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item]
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
 feedToItems = \case
