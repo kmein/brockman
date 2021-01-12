@@ -26,7 +26,7 @@ import Safe (readMay)
 data ControllerCommand
   = Info (IRC.ChannelName T.Text) (IRC.NickName T.Text)
   | Pinged (IRC.ServerName ByteString)
-  | Move (IRC.NickName T.Text) T.Text
+  | SetUrl (IRC.NickName T.Text) T.Text
   | Add (IRC.NickName T.Text) T.Text (Maybe (IRC.ChannelName ByteString))
   | Remove (IRC.NickName T.Text)
   | Tick (IRC.NickName T.Text) Int
@@ -66,7 +66,7 @@ controllerThread bloom configMVar = do
                     Just ["dump"] -> writeChan chan (Dump (decodeUtf8 channel))
                     Just ["help"] -> writeChan chan (Help (decodeUtf8 channel))
                     Just ["info", nick] -> writeChan chan (Info (decodeUtf8 channel) nick)
-                    Just ["move", nick, url] -> writeChan chan (Move nick url)
+                    Just ["set-url", nick, url] -> writeChan chan (SetUrl nick url)
                     Just ["add", nick, url] | "http" `T.isPrefixOf` url && isValidIrcNick nick ->
                       writeChan chan $ Add nick url $
                         if decodeUtf8 channel == configChannel then Nothing else Just channel
@@ -92,7 +92,7 @@ controllerThread bloom configMVar = do
                         [channel]
                         [ "help — send this helpful message",
                           "info NICK — display a bot's settings",
-                          "move NICK FEED_URL — change a bot's feed url",
+                          "set-url NICK FEED_URL — change a bot's feed url",
                           "tick NICK SECONDS — change a bot's tick speed",
                           "add NICK FEED_URL — add a new bot to all channels I am in",
                           "remove NICK — tell a bot to commit suicice",
@@ -119,9 +119,9 @@ controllerThread bloom configMVar = do
                       liftIO $ update configMVar $ configBotsL . at nick .~ Nothing
                       notice nick "remove"
                       broadcastNotice controllerChannels $ nick <> " is expected to commit suicide soon"
-                    Move nick url -> do
+                    SetUrl nick url -> do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botFeedL .~ url
-                      notice nick ("move to " <> T.unpack url)
+                      notice nick ("set url to " <> T.unpack url)
                       broadcastNotice controllerChannels $ nick <> " -> " <> url
                     Pinged serverName -> do
                       debug controllerNick ("pong " <> show serverName)
