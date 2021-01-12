@@ -22,6 +22,7 @@ executable brockman
     feed,
     filepath,
     hslogger,
+    html-entity,
     http-client,
     irc-conduit,
     lens,

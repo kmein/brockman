@@ -12,6 +12,7 @@ import Data.Text (Text, pack, strip, unwords, lines, intercalate)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import qualified Text.Atom.Feed as Atom
 import qualified Text.Feed.Types as Feed (Feed (..))
+import Text.HTMLEntity (decode')
 import Text.RSS.Syntax (RSSItem (..), rssChannel, rssItems)
 
 data FeedItem = FeedItem
@@ -21,7 +22,7 @@ data FeedItem = FeedItem
   deriving (Show)
 
 display :: FeedItem -> Text
-display item = Data.Text.unwords [strip $ itemLink item, strip $ Data.Text.intercalate " | " $ Data.Text.lines $ itemTitle item]
+display item = Data.Text.unwords [strip $ itemLink item, strip $ decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ itemTitle item]
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
 feedToItems = \case
