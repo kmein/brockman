@@ -108,10 +108,13 @@ controllerThread bloom configMVar = do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botDelayL ?~ tick
                       notice nick ("change tick speed to " <> show tick)
                       broadcastNotice controllerChannels $ nick <> " @ " <> T.pack (show tick) <> " seconds"
-                    Add nick url extraChannel -> do
-                      liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (:[]) . decodeUtf8 <$> extraChannel}
-                      _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
-                      pure ()
+                    Add nick url extraChannel ->
+                      case M.lookup nick configBots of
+                        Just BotConfig{botFeed} -> broadcast [maybe configChannel decodeUtf8 extraChannel] [nick <> " is already serving " <> botFeed]
+                        Nothing -> do
+                          liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (:[]) . decodeUtf8 <$> extraChannel}
+                          _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
+                          pure ()
                     Remove nick -> do
                       liftIO $ update configMVar $ configBotsL . at nick .~ Nothing
                       notice nick "remove"
