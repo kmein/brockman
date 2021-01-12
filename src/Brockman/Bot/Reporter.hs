@@ -56,14 +56,14 @@ reporterThread bloom configMVar nick = do
         withCurrentBotConfig nick configMVar $ \BotConfig {botExtraChannels} -> do
           let botChannels = configChannel : fromMaybe [] botExtraChannels
           command <- liftIO (readChan chan)
-          notice nick $ show command
+          debug nick $ show command
           case command of
             Pinged serverName -> do
               debug nick ("pong " <> show serverName)
               yield $ IRC.Pong serverName
             NewFeedItem item -> do
               item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
-              notice nick ("sending " <> show (display item'))
+              debug nick ("sending " <> show (display item'))
               broadcast botChannels [display item']
             Exception message ->
               broadcastNotice botChannels message
