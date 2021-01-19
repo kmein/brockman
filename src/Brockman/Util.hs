@@ -6,22 +6,16 @@ import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
 import Control.Lens
 import Control.Monad.IO.Class (MonadIO (..), liftIO)
-import Data.Aeson (ToJSON(toJSON))
+import Data.Aeson (ToJSON (toJSON))
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (toStrict)
 import Data.Char (isAsciiLower, isAsciiUpper)
-import Data.Fixed (Pico, Fixed(..))
-import Data.List (insert, delete)
-import Data.Text (Text, unpack, uncons, all)
+import Data.List (delete, insert)
+import Data.Text (Text, all, uncons, unpack)
 import Data.Text.Encoding (decodeUtf8With)
-import Data.Time.Clock (UTCTime, diffUTCTime, nominalDiffTimeToSeconds)
-import Data.Time.LocalTime (zonedTimeToUTC)
-import Data.Time.RFC822 (parseTimeRFC822)
 import Network.Wreq (post, responseBody)
 import System.Log.Logger
-import Text.Atom.Feed (Entry(entryUpdated))
-import Text.RSS.Syntax (RSSItem(rssItemPubDate))
 
 eloop :: IO a -> IO a
 eloop x =
@@ -81,12 +75,3 @@ pasteJson :: ToJSON a => Text -> a -> IO Text
 pasteJson endpoint value = do
   response <- post (Data.Text.unpack endpoint) . encodePretty $ toJSON value
   return $ decodeUtf8 $ Data.ByteString.Lazy.toStrict $ response ^. responseBody
-
-feedEntryUtc :: Either RSSItem Entry -> Maybe UTCTime
-feedEntryUtc entry = zonedTimeToUTC <$> (parseTimeRFC822 =<< either rssItemPubDate (Just . entryUpdated) entry)
-
-averageDelta :: [UTCTime] -> Pico
-averageDelta times = mean $ map (fromPico . nominalDiffTimeToSeconds) $ zipWith diffUTCTime times (tail times)
-  where
-    fromPico (MkFixed sec) = fromIntegral sec
-    mean xs = sum xs / fromIntegral (length xs)

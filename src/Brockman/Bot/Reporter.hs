@@ -8,12 +8,13 @@ import Brockman.Bot
 import Brockman.Feed
 import Brockman.Types
 import Brockman.Util
+import Control.Applicative (Alternative (..))
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
 import qualified Control.Exception as E
 import Control.Lens
-import Control.Monad (forever, unless, when)
+import Control.Monad
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.BloomFilter (Bloom)
 import qualified Data.ByteString as BS (ByteString)
@@ -96,7 +97,7 @@ feedThread nick configMVar isFirstTime bloom chan =
         sleepSeconds randomDelay
     r <- E.try $ get $ T.unpack botFeed
     debug nick ("fetch " <> T.unpack botFeed)
-    case r of
+    newTick <- case r of
       Left exception ->
         let mircRed text = "\ETX4,99" <> text <> "\ETX" -- ref https://www.mirc.com/colors.html
             message = (<> " — " <> botFeed) $
@@ -110,10 +111,14 @@ feedThread nick configMVar isFirstTime bloom chan =
          in do
               debug nick ("exception" <> T.unpack message)
               writeChan chan (Exception message)
+              pure Nothing
       Right resp -> do
-        items <- liftIO $ deduplicate bloom $ feedToItems $ parseFeedSource $ resp ^. responseBody
+        let feed = parseFeedSource $ resp ^. responseBody
+            delta = feedEntryDelta =<< feed
+        items <- liftIO $ deduplicate bloom $ feedToItems feed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
-    liftIO $ sleepSeconds delaySeconds
+        pure delta
+    liftIO $ sleepSeconds (fromMaybe 300 $ botDelay <|> newTick)
     debug nick "tick"
     feedThread nick configMVar False bloom chan
 
