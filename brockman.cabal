@@ -31,6 +31,8 @@ executable brockman
     random,
     safe,
     text,
+    time,
+    timerep,
     wreq
   default-language: Haskell2010
   ghc-options: -O2 -Wall -threaded
