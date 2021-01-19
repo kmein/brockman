@@ -27,8 +27,8 @@ eloop x =
     )
     x
 
-sleepSeconds :: Int -> IO ()
-sleepSeconds n = threadDelay (n * 10 ^ 6)
+sleepSeconds :: Integer -> IO ()
+sleepSeconds n = threadDelay (fromInteger n * 10 ^ 6)
 
 optionally :: Applicative f => (a -> f ()) -> Maybe a -> f ()
 optionally = maybe (pure ())

@@ -29,7 +29,7 @@ data ControllerCommand
   | SetUrl (IRC.NickName T.Text) T.Text
   | Add (IRC.NickName T.Text) T.Text (Maybe (IRC.ChannelName ByteString))
   | Remove (IRC.NickName T.Text)
-  | Tick (IRC.NickName T.Text) (Maybe Int)
+  | Tick (IRC.NickName T.Text) (Maybe Integer)
   | Invite (IRC.ChannelName ByteString)
   | Kick (IRC.ChannelName ByteString)
   | Help (IRC.ChannelName T.Text)

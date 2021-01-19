@@ -29,7 +29,7 @@ controllerExtraChannelsL = lens controllerExtraChannels (\controller channels ->
 botFeedL :: Lens' BotConfig Text
 botFeedL = lens botFeed (\bot feed -> bot {botFeed = feed})
 
-botDelayL :: Lens' BotConfig (Maybe Int)
+botDelayL :: Lens' BotConfig (Maybe Integer)
 botDelayL = lens botDelay (\bot delay -> bot {botDelay = delay})
 
 botExtraChannelsL :: Lens' BotConfig (Maybe [Text])
@@ -62,7 +62,7 @@ data IrcConfig = IrcConfig
 data BotConfig = BotConfig
   { botFeed :: Text,
     botExtraChannels :: Maybe [Text],
-    botDelay :: Maybe Int
+    botDelay :: Maybe Integer
   }
   deriving (Generic, Show, Typeable)
 

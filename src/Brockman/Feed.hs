@@ -48,7 +48,7 @@ feedEntryUtc item =
   where
     parseTime x = parseTimeRFC822 x <|> parseTimeRFC3339 x
 
-averageDelta :: [UTCTime] -> Maybe Int
+averageDelta :: [UTCTime] -> Maybe Integer
 averageDelta times = fmap (`div` (10 ^ 12)) $ mean $ map (unFixed . nominalDiffTimeToSeconds) $ zipWith diffUTCTime times' (tail times')
   where
     times' = take 10 $ reverse $ sort times
@@ -58,7 +58,7 @@ averageDelta times = fmap (`div` (10 ^ 12)) $ mean $ map (unFixed . nominalDiffT
       | null xs = Nothing
       | otherwise = Just $ round $ fromIntegral (sum xs) / fromIntegral (length xs)
 
-feedEntryDelta :: UTCTime -> Feed.Feed -> Maybe Int
+feedEntryDelta :: UTCTime -> Feed.Feed -> Maybe Integer
 feedEntryDelta now = averageDelta . (:) now . mapMaybe feedEntryUtc . feedItems
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
