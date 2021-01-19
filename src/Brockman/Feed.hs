@@ -11,9 +11,11 @@ import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, pack, strip, unwords, lines, intercalate)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
 import qualified Text.Atom.Feed as Atom
-import qualified Text.Feed.Types as Feed (Feed (..))
+import Text.Feed.Query (feedItems)
+import qualified Text.Feed.Types as Feed (Feed (..), Item(..))
 import Text.HTMLEntity (decode')
-import Text.RSS.Syntax (RSSItem (..), rssChannel, rssItems)
+import qualified Text.RSS.Syntax as RSS
+import qualified Text.RSS1.Syntax as RSS1
 
 data FeedItem = FeedItem
   { itemTitle :: Text,
@@ -25,21 +27,22 @@ display :: FeedItem -> Text
 display item = Data.Text.unwords [strip $ itemLink item, decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item]
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
-feedToItems = \case
-  Just (Feed.RSSFeed rss) ->
-    mapMaybe rssItemToItem (rssItems (rssChannel rss))
-  Just (Feed.AtomFeed atom) ->
-    mapMaybe atomEntryToItem (Atom.feedEntries atom)
-  _ -> []
+feedToItems = maybe [] (mapMaybe fromItem . feedItems)
   where
-    atomEntryToItem entry = FeedItem title <$> link
-      where
-        title = pack $ Atom.txtToString $ Atom.entryTitle entry
-        link = Atom.linkHref <$> listToMaybe (Atom.entryLinks entry)
-    rssItemToItem item = FeedItem title <$> link
-      where
-        title = fromMaybe "untitled" (rssItemTitle item)
-        link = rssItemLink item
+    fromItem = \case
+      Feed.AtomItem entry ->
+        let
+          title = pack $ Atom.txtToString $ Atom.entryTitle entry
+          link = Atom.linkHref <$> listToMaybe (Atom.entryLinks entry)
+         in FeedItem title <$> link
+      Feed.RSSItem item ->
+        let
+          title = fromMaybe "untitled" (RSS.rssItemTitle item)
+          link = RSS.rssItemLink item
+         in FeedItem title <$> link
+      Feed.RSS1Item item ->
+        Just $ FeedItem (RSS1.itemTitle item) (RSS1.itemLink item)
+      _ -> Nothing
 
 deduplicate :: MVar (Bloom BS.ByteString) -> [FeedItem] -> IO [FeedItem]
 deduplicate var items =
