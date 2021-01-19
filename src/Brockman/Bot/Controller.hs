@@ -33,8 +33,8 @@ data ControllerCommand
   | Invite (IRC.ChannelName ByteString)
   | Kick (IRC.ChannelName ByteString)
   | Help (IRC.ChannelName T.Text)
-  | Subscribe (IRC.NickName T.Text) {- subscriber -} (IRC.NickName T.Text) {- bot -}
-  | Unsubscribe (IRC.NickName T.Text) {- subscriber -} (IRC.NickName T.Text) {- bot -}
+  | Subscribe (IRC.NickName T.Text {- subscriber -}) (IRC.NickName T.Text {- bot -})
+  | Unsubscribe (IRC.NickName T.Text {- subscriber -}) (IRC.NickName T.Text {- bot -})
   | Dump (IRC.ChannelName T.Text)
   deriving (Show)
 
@@ -67,9 +67,11 @@ controllerThread bloom configMVar = do
                     Just ["help"] -> writeChan chan (Help (decodeUtf8 channel))
                     Just ["info", nick] -> writeChan chan (Info (decodeUtf8 channel) nick)
                     Just ["set-url", nick, url] -> writeChan chan (SetUrl nick url)
-                    Just ["add", nick, url] | "http" `T.isPrefixOf` url && isValidIrcNick nick ->
-                      writeChan chan $ Add nick url $
-                        if decodeUtf8 channel == configChannel then Nothing else Just channel
+                    Just ["add", nick, url]
+                      | "http" `T.isPrefixOf` url && isValidIrcNick nick ->
+                        writeChan chan $
+                          Add nick url $
+                            if decodeUtf8 channel == configChannel then Nothing else Just channel
                     Just ["remove", nick] -> writeChan chan (Remove nick)
                     Just ["tick", nick, tickString]
                       | Just tick <- readMay (T.unpack tickString) -> writeChan chan (Tick nick tick)
@@ -110,9 +112,9 @@ controllerThread bloom configMVar = do
                       broadcastNotice controllerChannels $ nick <> " @ " <> T.pack (show tick) <> " seconds"
                     Add nick url extraChannel ->
                       case M.lookup nick configBots of
-                        Just BotConfig{botFeed} -> broadcast [maybe configChannel decodeUtf8 extraChannel] [nick <> " is already serving " <> botFeed]
+                        Just BotConfig {botFeed} -> broadcast [maybe configChannel decodeUtf8 extraChannel] [nick <> " is already serving " <> botFeed]
                         Nothing -> do
-                          liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (:[]) . decodeUtf8 <$> extraChannel}
+                          liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (: []) . decodeUtf8 <$> extraChannel}
                           _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
                           pure ()
                     Remove nick -> do
@@ -159,7 +161,7 @@ controllerThread bloom configMVar = do
                             _
                               | nick == controllerNick -> T.pack (show controllerChannels)
                               | otherwise ->
-                                case M.keys $ M.filter (\BotConfig{botExtraChannels} -> nick `elem` fromMaybe [] botExtraChannels) configBots of
+                                case M.keys $ M.filter (\BotConfig {botExtraChannels} -> nick `elem` fromMaybe [] botExtraChannels) configBots of
                                   [] -> nick <> " is neither bot nor subscriber"
                                   subscriptions -> nick <> " has subscribed to " <> T.pack (show subscriptions)
        in withIrcConnection config listen speak
