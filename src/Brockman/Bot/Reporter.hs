@@ -24,13 +24,13 @@ import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
 import Data.Text.Encoding (encodeUtf8)
+import Data.Time.Clock (getCurrentTime)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest), HttpExceptionContent (ConnectionFailure, StatusCodeException))
 import qualified Network.IRC.Conduit as IRC
 import Network.Socket (HostName)
 import Network.Wreq (FormParam ((:=)), get, post, responseBody, responseStatus, statusCode, statusMessage)
 import System.Random (randomRIO)
 import Text.Feed.Import (parseFeedSource)
-import Data.Time.Clock (getCurrentTime)
 
 data ReporterMessage
   = Pinged (IRC.ServerName BS.ByteString)
@@ -120,8 +120,9 @@ feedThread nick configMVar isFirstTime bloom chan =
         items <- liftIO $ deduplicate bloom $ feedToItems feed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
         pure delta
-    liftIO $ sleepSeconds (fromMaybe 300 $ botDelay <|> newTick)
-    debug nick "tick"
+    let tick = fromMaybe 300 $ botDelay <|> newTick
+    notice nick $ "tick " <> show tick
+    liftIO $ sleepSeconds tick
     feedThread nick configMVar False bloom chan
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
