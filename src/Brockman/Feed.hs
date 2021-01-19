@@ -14,7 +14,7 @@ import Data.List
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, intercalate, lines, pack, strip, unwords)
 import qualified Data.Text.Encoding as Text (encodeUtf8)
-import Data.Time.Clock (UTCTime, diffUTCTime, nominalDiffTimeToSeconds)
+import Data.Time.Clock
 import Data.Time.LocalTime (zonedTimeToUTC)
 import Data.Time.RFC3339 (parseTimeRFC3339)
 import Data.Time.RFC822 (parseTimeRFC822)
@@ -51,9 +51,9 @@ feedEntryUtc item =
 averageDelta :: [UTCTime] -> Maybe Integer
 averageDelta times = fmap (`div` (10 ^ 12)) $ mean $ map (unFixed . nominalDiffTimeToSeconds) $ zipWith diffUTCTime times' (tail times')
   where
-    times' = take 10 $ reverse $ sort times
+    times' = take 10 $ reverse $ nubBy sameMinute $ sort times
+    sameMinute time1 time2 = abs (diffUTCTime time1 time2) < secondsToNominalDiffTime 60
     unFixed (MkFixed x) = x
-    -- fromPico x = unFixed x `div` (10^resolution x)
     mean xs
       | null xs = Nothing
       | otherwise = Just $ round $ fromIntegral (sum xs) / fromIntegral (length xs)
