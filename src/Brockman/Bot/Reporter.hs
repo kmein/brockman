@@ -30,6 +30,7 @@ import Network.Socket (HostName)
 import Network.Wreq (FormParam ((:=)), get, post, responseBody, responseStatus, statusCode, statusMessage)
 import System.Random (randomRIO)
 import Text.Feed.Import (parseFeedSource)
+import Data.Time.Clock (getCurrentTime)
 
 data ReporterMessage
   = Pinged (IRC.ServerName BS.ByteString)
@@ -113,8 +114,9 @@ feedThread nick configMVar isFirstTime bloom chan =
               writeChan chan (Exception message)
               pure Nothing
       Right resp -> do
+        now <- liftIO getCurrentTime
         let feed = parseFeedSource $ resp ^. responseBody
-            delta = feedEntryDelta =<< feed
+            delta = feedEntryDelta now =<< feed
         items <- liftIO $ deduplicate bloom $ feedToItems feed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
         pure delta

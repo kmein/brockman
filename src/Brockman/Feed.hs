@@ -58,8 +58,8 @@ averageDelta times = fmap (`div` (10 ^ 12)) $ mean $ map (unFixed . nominalDiffT
       | null xs = Nothing
       | otherwise = Just $ round $ fromIntegral (sum xs) / fromIntegral (length xs)
 
-feedEntryDelta :: Feed.Feed -> Maybe Int
-feedEntryDelta = averageDelta . mapMaybe feedEntryUtc . feedItems
+feedEntryDelta :: UTCTime -> Feed.Feed -> Maybe Int
+feedEntryDelta now = averageDelta . (:) now . mapMaybe feedEntryUtc . feedItems
 
 feedToItems :: Maybe Feed.Feed -> [FeedItem]
 feedToItems = maybe [] (mapMaybe fromItem . feedItems)
