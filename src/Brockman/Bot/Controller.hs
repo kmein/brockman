@@ -29,7 +29,7 @@ data ControllerCommand
   | SetUrl (IRC.NickName T.Text) T.Text
   | Add (IRC.NickName T.Text) T.Text (Maybe (IRC.ChannelName ByteString))
   | Remove (IRC.NickName T.Text)
-  | Tick (IRC.NickName T.Text) Int
+  | Tick (IRC.NickName T.Text) (Maybe Int)
   | Invite (IRC.ChannelName ByteString)
   | Kick (IRC.ChannelName ByteString)
   | Help (IRC.ChannelName T.Text)
@@ -73,8 +73,8 @@ controllerThread bloom configMVar = do
                           Add nick url $
                             if decodeUtf8 channel == configChannel then Nothing else Just channel
                     Just ["remove", nick] -> writeChan chan (Remove nick)
-                    Just ["tick", nick, tickString]
-                      | Just tick <- readMay (T.unpack tickString) -> writeChan chan (Tick nick tick)
+                    Just ["tick", nick, tickString] ->
+                      writeChan chan (Tick nick $ readMay (T.unpack tickString))
                     Just _ -> writeChan chan (Help (decodeUtf8 channel))
                     _ -> pure ()
                 _ -> pure ()
@@ -107,9 +107,9 @@ controllerThread bloom configMVar = do
                           "/kick " <> controllerNick <> " — kick the controller from your channel"
                         ]
                     Tick nick tick -> do
-                      liftIO $ update configMVar $ configBotsL . at nick . mapped . botDelayL ?~ tick
+                      liftIO $ update configMVar $ configBotsL . at nick . mapped . botDelayL .~ tick
                       notice nick ("change tick speed to " <> show tick)
-                      broadcastNotice controllerChannels $ nick <> " @ " <> T.pack (show tick) <> " seconds"
+                      broadcastNotice controllerChannels $ nick <> " @ " <> T.pack (maybe "auto" ((<> " seconds") . show) tick)
                     Add nick url extraChannel ->
                       case M.lookup nick configBots of
                         Just BotConfig {botFeed} -> broadcast [maybe configChannel decodeUtf8 extraChannel] [nick <> " is already serving " <> botFeed]
