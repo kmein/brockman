@@ -40,6 +40,8 @@ data ReporterMessage
   | Exception T.Text
   deriving (Show)
 
+defaultDelay = 300
+
 -- return the current config or kill thread if the key is not present
 withCurrentBotConfig :: MonadIO m => T.Text -> MVar BrockmanConfig -> (BotConfig -> m ()) -> m ()
 withCurrentBotConfig nick configMVar handler = do
@@ -90,7 +92,7 @@ reporterThread bloom configMVar nick = do
 feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
 feedThread nick configMVar isFirstTime bloom chan =
   withCurrentBotConfig nick configMVar $ \BotConfig {botDelay, botFeed} -> do
-    let delaySeconds = fromMaybe 300 botDelay
+    let delaySeconds = fromMaybe defaultDelay botDelay
     liftIO $
       when isFirstTime $ do
         randomDelay <- randomRIO (0, delaySeconds)
@@ -120,7 +122,7 @@ feedThread nick configMVar isFirstTime bloom chan =
         items <- liftIO $ deduplicate bloom $ feedToItems feed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
         pure delta
-    let tick = fromMaybe 300 $ botDelay <|> newTick
+    let tick = max 1 $ min 86400 $ fromMaybe defaultDelay $ botDelay <|> newTick
     notice nick $ "tick " <> show tick
     liftIO $ sleepSeconds tick
     feedThread nick configMVar False bloom chan
