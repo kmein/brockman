@@ -43,7 +43,8 @@ data BrockmanConfig = BrockmanConfig
     configShortener :: Maybe Text,
     configController :: Maybe ControllerConfig,
     configStatePath :: Maybe FilePath,
-    configPastebin :: Maybe Text
+    configPastebin :: Maybe Text,
+    configDefaultDelay :: Maybe Integer
   }
   deriving (Generic, Show, Typeable)
 
