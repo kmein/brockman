@@ -34,12 +34,20 @@ optionally :: Applicative f => (a -> f ()) -> Maybe a -> f ()
 optionally = maybe (pure ())
 
 notice :: MonadIO m => Text -> String -> m ()
-notice botFeed message =
-  liftIO $ noticeM "brockman" ("[" <> unpack botFeed <> "] " <> message)
+notice nick message =
+  liftIO $ noticeM "brockman" ("[" <> unpack nick <> "] " <> message)
 
 debug :: MonadIO m => Text -> String -> m ()
-debug botFeed message =
-  liftIO $ debugM "brockman" ("[" <> unpack botFeed <> "] " <> message)
+debug nick message =
+  liftIO $ debugM "brockman" ("[" <> unpack nick <> "] " <> message)
+
+warning :: MonadIO m => Text -> String -> m ()
+warning nick message =
+  liftIO $ warningM "brockman" ("[" <> unpack nick <> "] " <> message)
+
+error' :: MonadIO m => Text -> String -> m ()
+error' nick message =
+  liftIO $ errorM "brockman" ("[" <> unpack nick <> "] " <> message)
 
 suicide :: IO ()
 suicide = killThread =<< myThreadId

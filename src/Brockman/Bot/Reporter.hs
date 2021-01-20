@@ -111,14 +111,16 @@ feedThread nick configMVar isFirstTime bloom chan =
                     HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
                     _ -> T.pack $ show exception
          in do
-              debug nick ("exception" <> T.unpack message)
+              error' nick ("exception" <> T.unpack message)
               writeChan chan (Exception message)
               pure Nothing
       Right resp -> do
         now <- liftIO getCurrentTime
         let feed = parseFeedSource $ resp ^. responseBody
             delta = feedEntryDelta now =<< feed
-        items <- liftIO $ deduplicate bloom $ feedToItems feed
+            feedItems = feedToItems feed
+        items <- liftIO $ deduplicate bloom feedItems
+        when (null feedItems) $ warning nick $ "Feed is empty: " <> T.unpack botFeed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
         pure delta
     let tick = max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
