@@ -127,7 +127,8 @@ feedThread nick configMVar isFirstTime bloom chan =
     notice nick $ "tick " <> show tick
     liftIO $ sleepSeconds tick
     feedThread nick configMVar False bloom chan
-  where fallbackDelay = 300
+  where
+    fallbackDelay = 300
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do

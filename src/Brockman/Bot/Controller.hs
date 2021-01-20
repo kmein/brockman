@@ -109,7 +109,8 @@ controllerThread bloom configMVar = do
                     Tick nick tick -> do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botDelayL .~ tick
                       notice nick ("change tick speed to " <> show tick)
-                      broadcastNotice controllerChannels $ nick <> " @ " <> T.pack (maybe "auto" ((<> " seconds") . show) tick)
+                      channelsForNick <- botChannels nick <$> liftIO (readMVar configMVar)
+                      broadcastNotice channelsForNick $ nick <> " @ " <> T.pack (maybe "auto" ((<> " seconds") . show) tick)
                     Add nick url extraChannel ->
                       case M.lookup nick configBots of
                         Just BotConfig {botFeed} -> broadcast [maybe configChannel decodeUtf8 extraChannel] [nick <> " is already serving " <> botFeed]
@@ -120,11 +121,13 @@ controllerThread bloom configMVar = do
                     Remove nick -> do
                       liftIO $ update configMVar $ configBotsL . at nick .~ Nothing
                       notice nick "remove"
-                      broadcastNotice controllerChannels $ nick <> " is expected to commit suicide soon"
+                      channelsForNick <- botChannels nick <$> liftIO (readMVar configMVar)
+                      broadcastNotice channelsForNick $ nick <> " is expected to commit suicide soon"
                     SetUrl nick url -> do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botFeedL .~ url
                       notice nick ("set url to " <> T.unpack url)
-                      broadcastNotice controllerChannels $ nick <> " -> " <> url
+                      channelsForNick <- botChannels nick <$> liftIO (readMVar configMVar)
+                      broadcastNotice channelsForNick $ nick <> " -> " <> url
                     Pinged serverName -> do
                       debug controllerNick ("pong " <> show serverName)
                       yield $ IRC.Pong serverName

@@ -10,7 +10,7 @@ import Data.Aeson hiding ((.=))
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isLower, toLower)
-import Data.Map (Map)
+import Data.Map (Map, lookup)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -34,6 +34,9 @@ botDelayL = lens botDelay (\bot delay -> bot {botDelay = delay})
 
 botExtraChannelsL :: Lens' BotConfig (Maybe [Text])
 botExtraChannelsL = lens botExtraChannels (\bot channels -> bot {botExtraChannels = channels})
+
+botChannels :: Text -> BrockmanConfig -> [Text]
+botChannels nick config = maybe [] (configChannel config :) $ botExtraChannels =<< Data.Map.lookup nick (configBots config)
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Text BotConfig,
