@@ -76,8 +76,8 @@ isValidIrcNick nick =
     Just (first, rest) -> isLetter first && Data.Text.all (\c -> isLetter c || isNumber c || isSpecial c) rest
   where
     isLetter c = isAsciiLower c || isAsciiUpper c
-    isNumber c = c `elem` "0123456789"
-    isSpecial c = c `elem` "-[]\\`^{}_|" -- '_' and '|' are not in the RFC, but they work
+    isNumber c = c `elem` ("0123456789" :: String)
+    isSpecial c = c `elem` ("-[]\\`^{}_|" :: String) -- '_' and '|' are not in the RFC, but they work
 
 pasteJson :: ToJSON a => Text -> a -> IO Text
 pasteJson endpoint value = do

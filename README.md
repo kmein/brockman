@@ -3,6 +3,9 @@ Read RSS feeds in your favourite IRC channels
 
 ## Usage
 
+### Development REPL
+- Nix: `nix-shell --attr env default.nix --run "cabal repl"  `
+
 ### Build
 - Nix: `nix-build`
 - Legacy: `cabal build`

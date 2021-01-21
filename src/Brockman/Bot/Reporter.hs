@@ -28,7 +28,7 @@ import Data.Time.Clock (getCurrentTime)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest), HttpExceptionContent (ConnectionFailure, StatusCodeException))
 import qualified Network.IRC.Conduit as IRC
 import Network.Socket (HostName)
-import Network.Wreq (FormParam ((:=)), get, post, responseBody, responseStatus, statusCode, statusMessage)
+import Network.Wreq (FormParam ((:=)), getWith, post, responseBody, responseStatus, statusCode, statusMessage, header, defaults)
 import System.Random (randomRIO)
 import Text.Feed.Import (parseFeedSource)
 
@@ -87,6 +87,27 @@ reporterThread bloom configMVar nick = do
           Just (Right (IRC.Event _ _ (IRC.Kick channel nick' _))) | nick == decodeUtf8 nick' -> liftIO $ writeChan chan (Kicked channel)
           _ -> pure ()
 
+getFeed :: T.Text -> IO (Maybe Integer, Either T.Text [FeedItem])
+getFeed url =
+  E.try (getWith options (T.unpack url)) >>= \case
+    Left exception ->
+      let mircRed text = "\ETX4,99" <> text <> "\ETX" -- ref https://www.mirc.com/colors.html
+          message = mircRed $
+              T.unwords $
+                T.words $ case exception of
+                  HttpExceptionRequest _ (StatusCodeException response _) ->
+                    T.unwords [T.pack $ show $ response ^. responseStatus . statusCode, decodeUtf8 $ response ^. responseStatus . statusMessage]
+                  HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
+                  _ -> T.pack $ show exception
+      in return (Nothing, Left message)
+    Right response -> do
+      now <- liftIO getCurrentTime
+      let feed = parseFeedSource $ response ^. responseBody
+          delta = feedEntryDelta now =<< feed
+          feedItems = feedToItems feed
+      return (delta, Right feedItems)
+  where options = defaults & header "Accept" .~ ["application/atom+xml", "application/rss+xml", "*/*"]
+
 feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
 feedThread nick configMVar isFirstTime bloom chan =
   withCurrentBotConfig nick configMVar $ \BotConfig {botDelay, botFeed} -> do
@@ -95,34 +116,18 @@ feedThread nick configMVar isFirstTime bloom chan =
     liftIO $
       when isFirstTime $ do
         randomDelay <- randomRIO (0, delaySeconds)
-        debug nick ("sleep " <> show randomDelay)
+        debug nick $ "sleep " <> show randomDelay
         sleepSeconds randomDelay
-    r <- E.try $ get $ T.unpack botFeed
     debug nick ("fetch " <> T.unpack botFeed)
-    newTick <- case r of
-      Left exception ->
-        let mircRed text = "\ETX4,99" <> text <> "\ETX" -- ref https://www.mirc.com/colors.html
-            message = (<> " — " <> botFeed) $
-              mircRed $
-                T.unwords $
-                  T.words $ case exception of
-                    HttpExceptionRequest _ (StatusCodeException response _) ->
-                      T.unwords [T.pack $ show $ response ^. responseStatus . statusCode, decodeUtf8 $ response ^. responseStatus . statusMessage]
-                    HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
-                    _ -> T.pack $ show exception
-         in do
-              error' nick ("exception" <> T.unpack message)
-              writeChan chan (Exception message)
-              pure Nothing
-      Right resp -> do
-        now <- liftIO getCurrentTime
-        let feed = parseFeedSource $ resp ^. responseBody
-            delta = feedEntryDelta now =<< feed
-            feedItems = feedToItems feed
+    (newTick, exceptionOrFeed) <- liftIO $ getFeed botFeed
+    case exceptionOrFeed of
+      Left message -> do
+        error' nick $ "exception" <> T.unpack message
+        writeChan chan $ Exception $ message <> " — " <> botFeed
+      Right feedItems -> do
         items <- liftIO $ deduplicate bloom feedItems
         when (null feedItems) $ warning nick $ "Feed is empty: " <> T.unpack botFeed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
-        pure delta
     let tick = max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
     notice nick $ "tick " <> show tick
     liftIO $ sleepSeconds tick
