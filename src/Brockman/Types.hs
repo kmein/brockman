@@ -110,7 +110,7 @@ instance (FoldCase a, FromJSON a) => FromJSON (CI a) where
   parseJSON = fmap mk . parseJSON
 
 instance ToJSON a => ToJSON (CI a) where
-  toJSON = toJSON
+  toJSON = toJSON . foldedCase
 
 instance ToJSONKey (CI Text) where
   toJSONKey = toJSONKeyText foldedCase
