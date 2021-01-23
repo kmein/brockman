@@ -126,7 +126,9 @@ feedThread nick configMVar isFirstTime bloom chan =
         writeChan chan $ Exception $ message <> " — " <> botFeed
       Right feedItems -> do
         items <- liftIO $ deduplicate bloom feedItems
-        when (null feedItems) $ warning nick $ "Feed is empty: " <> T.unpack botFeed
+        when (null feedItems) $ do
+          warning nick $ "Feed is empty: " <> T.unpack botFeed
+          writeChan chan $ Exception $ "feed is empty: " <> botFeed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
     let tick = max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
     notice nick $ "tick " <> show tick
