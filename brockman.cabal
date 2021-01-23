@@ -16,6 +16,7 @@ executable brockman
     base,
     bloomfilter,
     bytestring,
+    case-insensitive,
     conduit,
     containers,
     directory,

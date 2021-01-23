@@ -2,6 +2,7 @@
 
 module Brockman.Util where
 
+import Brockman.Types (Nick)
 import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
 import Control.Lens
@@ -10,6 +11,7 @@ import Data.Aeson (ToJSON (toJSON))
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (toStrict)
+import Data.CaseInsensitive (foldedCase)
 import Data.Char (isAsciiLower, isAsciiUpper)
 import Data.List (delete, insert)
 import Data.Text (Text, all, uncons, unpack)
@@ -33,21 +35,21 @@ sleepSeconds n = threadDelay (fromInteger n * 10 ^ 6)
 optionally :: Applicative f => (a -> f ()) -> Maybe a -> f ()
 optionally = maybe (pure ())
 
-notice :: MonadIO m => Text -> String -> m ()
+notice :: MonadIO m => Nick -> String -> m ()
 notice nick message =
-  liftIO $ noticeM "brockman" ("[" <> unpack nick <> "] " <> message)
+  liftIO $ noticeM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
 
-debug :: MonadIO m => Text -> String -> m ()
+debug :: MonadIO m => Nick -> String -> m ()
 debug nick message =
-  liftIO $ debugM "brockman" ("[" <> unpack nick <> "] " <> message)
+  liftIO $ debugM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
 
-warning :: MonadIO m => Text -> String -> m ()
+warning :: MonadIO m => Nick -> String -> m ()
 warning nick message =
-  liftIO $ warningM "brockman" ("[" <> unpack nick <> "] " <> message)
+  liftIO $ warningM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
 
-error' :: MonadIO m => Text -> String -> m ()
+error' :: MonadIO m => Nick -> String -> m ()
 error' nick message =
-  liftIO $ errorM "brockman" ("[" <> unpack nick <> "] " <> message)
+  liftIO $ errorM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
 
 suicide :: IO ()
 suicide = killThread =<< myThreadId

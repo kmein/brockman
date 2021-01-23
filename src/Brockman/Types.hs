@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Brockman.Types where
@@ -8,64 +9,73 @@ import Control.Concurrent.MVar
 import Control.Lens
 import Data.Aeson hiding ((.=))
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Aeson.Types
 import qualified Data.ByteString.Lazy as BL
+import Data.CaseInsensitive
 import Data.Char (isLower, toLower)
 import Data.Map (Map, lookup)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import qualified Network.IRC.Conduit as IRC
 import System.Directory (getHomeDirectory)
 import System.FilePath ((</>))
 
-configBotsL :: Lens' BrockmanConfig (Map Text BotConfig)
+type URL = Text
+
+type Nick = IRC.NickName (CI Text)
+
+type Channel = IRC.ChannelName (CI Text)
+
+configBotsL :: Lens' BrockmanConfig (Map Nick BotConfig)
 configBotsL = lens configBots (\config bots -> config {configBots = bots})
 
 configControllerL :: Lens' BrockmanConfig (Maybe ControllerConfig)
 configControllerL = lens configController (\config controller -> config {configController = controller})
 
-controllerExtraChannelsL :: Lens' ControllerConfig (Maybe [Text])
+controllerExtraChannelsL :: Lens' ControllerConfig (Maybe [Channel])
 controllerExtraChannelsL = lens controllerExtraChannels (\controller channels -> controller {controllerExtraChannels = channels})
 
-botFeedL :: Lens' BotConfig Text
+botFeedL :: Lens' BotConfig URL
 botFeedL = lens botFeed (\bot feed -> bot {botFeed = feed})
 
 botDelayL :: Lens' BotConfig (Maybe Integer)
 botDelayL = lens botDelay (\bot delay -> bot {botDelay = delay})
 
-botExtraChannelsL :: Lens' BotConfig (Maybe [Text])
+botExtraChannelsL :: Lens' BotConfig (Maybe [Channel])
 botExtraChannelsL = lens botExtraChannels (\bot channels -> bot {botExtraChannels = channels})
 
-botChannels :: Text -> BrockmanConfig -> [Text]
+botChannels :: Nick -> BrockmanConfig -> [Channel]
 botChannels nick config = maybe [] (configChannel config :) $ botExtraChannels =<< Data.Map.lookup nick (configBots config)
 
 data BrockmanConfig = BrockmanConfig
-  { configBots :: Map Text BotConfig,
-    configChannel :: Text,
+  { configBots :: Map Nick BotConfig,
+    configChannel :: Channel,
     configUseTls :: Maybe Bool,
     configIrc :: IrcConfig,
-    configShortener :: Maybe Text,
+    configShortener :: Maybe URL,
     configController :: Maybe ControllerConfig,
     configStatePath :: Maybe FilePath,
-    configPastebin :: Maybe Text,
+    configPastebin :: Maybe URL,
     configDefaultDelay :: Maybe Integer
   }
   deriving (Generic, Show, Typeable)
 
 data ControllerConfig = ControllerConfig
-  { controllerNick :: Text,
-    controllerExtraChannels :: Maybe [Text]
+  { controllerNick :: Nick,
+    controllerExtraChannels :: Maybe [Channel]
   }
   deriving (Generic, Show, Typeable)
 
 data IrcConfig = IrcConfig
-  { ircHost :: Text,
+  { ircHost :: URL,
     ircPort :: Maybe Int
   }
   deriving (Generic, Show, Typeable)
 
 data BotConfig = BotConfig
-  { botFeed :: Text,
-    botExtraChannels :: Maybe [Text],
+  { botFeed :: URL,
+    botExtraChannels :: Maybe [Channel],
     botDelay :: Maybe Integer
   }
   deriving (Generic, Show, Typeable)
@@ -95,6 +105,18 @@ myOptions =
       \case
         [] -> []
         (x : xs) -> toLower x : xs
+
+instance (FoldCase a, FromJSON a) => FromJSON (CI a) where
+  parseJSON = fmap mk . parseJSON
+
+instance ToJSON a => ToJSON (CI a) where
+  toJSON = toJSON
+
+instance ToJSONKey (CI Text) where
+  toJSONKey = toJSONKeyText foldedCase
+
+instance FromJSONKey (CI Text) where
+  fromJSONKey = FromJSONKeyText mk
 
 instance FromJSON BrockmanConfig where
   parseJSON = genericParseJSON myOptions

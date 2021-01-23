@@ -7,6 +7,7 @@ import Brockman.Types
 import Brockman.Util (notice)
 import Control.Concurrent.Chan
 import Data.ByteString (ByteString)
+import Data.CaseInsensitive (foldedCase)
 import Data.Conduit
 import Data.Conduit.List (sourceList)
 import Data.Maybe
@@ -24,26 +25,26 @@ withIrcConnection BrockmanConfig {configIrc, configUseTls} listen speak = do
     (listen chan)
     (speak chan)
 
-handshake :: T.Text -> [T.Text] -> ConduitM () IRC.IrcMessage IO ()
+handshake :: Nick -> [Channel] -> ConduitM () IRC.IrcMessage IO ()
 handshake nick channels = do
   notice nick ("handshake, joining " <> show channels)
-  yield $ IRC.Nick $ encodeUtf8 nick
-  yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> nick <> " * 0 :" <> nick
-  mapM_ (yield . IRC.Join . encodeUtf8) channels
+  yield $ IRC.Nick $ encodeUtf8 $ foldedCase nick
+  yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> foldedCase nick <> " * 0 :" <> foldedCase nick
+  mapM_ (yield . IRC.Join . encodeUtf8 . foldedCase) channels
 
 -- maybe join channels separated by comma
 
-broadcastNotice :: Monad m => [T.Text] -> T.Text -> ConduitT i (IRC.Message ByteString) m ()
+broadcastNotice :: Monad m => [Channel] -> T.Text -> ConduitT i (IRC.Message ByteString) m ()
 broadcastNotice channels message =
   sourceList
-    [ IRC.Notice (encodeUtf8 channel) $ Right $ encodeUtf8 message
+    [ IRC.Notice (encodeUtf8 $ foldedCase channel) $ Right $ encodeUtf8 message
       | channel <- channels
     ]
 
-broadcast :: Monad m => [T.Text] -> [T.Text] -> ConduitT i (IRC.Message ByteString) m ()
+broadcast :: Monad m => [Channel] -> [T.Text] -> ConduitT i (IRC.Message ByteString) m ()
 broadcast channels messages =
   sourceList
-    [ IRC.Privmsg (encodeUtf8 channel) $ Right $ encodeUtf8 message
+    [ IRC.Privmsg (encodeUtf8 $ foldedCase channel) $ Right $ encodeUtf8 message
       | channel <- channels,
         message <- messages
     ]

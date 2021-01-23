@@ -19,6 +19,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.BloomFilter (Bloom)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
+import Data.CaseInsensitive (foldedCase, mk)
 import Data.Conduit
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
@@ -28,31 +29,31 @@ import Data.Time.Clock (getCurrentTime)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest), HttpExceptionContent (ConnectionFailure, StatusCodeException))
 import qualified Network.IRC.Conduit as IRC
 import Network.Socket (HostName)
-import Network.Wreq (FormParam ((:=)), getWith, post, responseBody, responseStatus, statusCode, statusMessage, header, defaults)
+import Network.Wreq (FormParam ((:=)), defaults, getWith, header, post, responseBody, responseStatus, statusCode, statusMessage)
 import System.Random (randomRIO)
 import Text.Feed.Import (parseFeedSource)
 
 data ReporterMessage
   = Pinged (IRC.ServerName BS.ByteString)
-  | Invited (IRC.ChannelName BS.ByteString)
-  | Kicked (IRC.ChannelName BS.ByteString)
+  | Invited Channel
+  | Kicked Channel
   | NewFeedItem FeedItem
   | Exception T.Text
   deriving (Show)
 
 -- return the current config or kill thread if the key is not present
-withCurrentBotConfig :: MonadIO m => T.Text -> MVar BrockmanConfig -> (BotConfig -> m ()) -> m ()
+withCurrentBotConfig :: MonadIO m => Nick -> MVar BrockmanConfig -> (BotConfig -> m ()) -> m ()
 withCurrentBotConfig nick configMVar handler = do
   BrockmanConfig {configBots} <- liftIO $ readMVar configMVar
   maybe (liftIO suicide) handler $ M.lookup nick configBots
 
-reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> T.Text -> IO ()
+reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> Nick -> IO ()
 reporterThread bloom configMVar nick = do
   config@BrockmanConfig {configChannel, configShortener} <- readMVar configMVar
   withIrcConnection config listen $ \chan -> do
     withCurrentBotConfig nick configMVar $ \BotConfig {botExtraChannels} -> do
       handshake nick (configChannel : fromMaybe [] botExtraChannels)
-      yield $ IRC.Mode (encodeUtf8 nick) False [] ["+D"] -- deafen to PRIVMSGs
+      yield $ IRC.Mode (encodeUtf8 $ foldedCase nick) False [] ["+D"] -- deafen to PRIVMSGs
       _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
       forever $
         withCurrentBotConfig nick configMVar $ \BotConfig {botExtraChannels} -> do
@@ -70,45 +71,47 @@ reporterThread bloom configMVar nick = do
             Exception message ->
               broadcastNotice botChannels message
             Kicked channel -> do
-              let channel' = decodeUtf8 channel
-              liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ delete channel'
-              notice nick $ "kicked from " <> T.unpack channel'
+              liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ delete channel
+              notice nick $ "kicked from " <> show channel
             Invited channel -> do
-              let channel' = decodeUtf8 channel
-              liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ insert channel'
-              notice nick $ "invited to " <> T.unpack channel'
-              yield $ IRC.Join channel
+              liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ insert channel
+              notice nick $ "invited to " <> show channel
+              yield $ IRC.Join $ encodeUtf8 $ foldedCase channel
   where
     listen chan =
       forever $
         await >>= \case
           Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
-          Just (Right (IRC.Event _ _ (IRC.Invite channel _))) -> liftIO $ writeChan chan (Invited channel)
-          Just (Right (IRC.Event _ _ (IRC.Kick channel nick' _))) | nick == decodeUtf8 nick' -> liftIO $ writeChan chan (Kicked channel)
+          Just (Right (IRC.Event _ _ (IRC.Invite channel _))) ->
+            liftIO $ writeChan chan $ Invited $ mk $ decodeUtf8 channel
+          Just (Right (IRC.Event _ _ (IRC.Kick channel nick' _)))
+            | nick == mk (decodeUtf8 nick') ->
+              liftIO $ writeChan chan $ Kicked $ mk $ decodeUtf8 channel
           _ -> pure ()
 
-getFeed :: T.Text -> IO (Maybe Integer, Either T.Text [FeedItem])
+getFeed :: URL -> IO (Maybe Integer, Either T.Text [FeedItem])
 getFeed url =
   E.try (getWith options (T.unpack url)) >>= \case
     Left exception ->
       let mircRed text = "\ETX4,99" <> text <> "\ETX" -- ref https://www.mirc.com/colors.html
           message = mircRed $
-              T.unwords $
-                T.words $ case exception of
-                  HttpExceptionRequest _ (StatusCodeException response _) ->
-                    T.unwords [T.pack $ show $ response ^. responseStatus . statusCode, decodeUtf8 $ response ^. responseStatus . statusMessage]
-                  HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
-                  _ -> T.pack $ show exception
-      in return (Nothing, Left message)
+            T.unwords $
+              T.words $ case exception of
+                HttpExceptionRequest _ (StatusCodeException response _) ->
+                  T.unwords [T.pack $ show $ response ^. responseStatus . statusCode, decodeUtf8 $ response ^. responseStatus . statusMessage]
+                HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
+                _ -> T.pack $ show exception
+       in return (Nothing, Left message)
     Right response -> do
       now <- liftIO getCurrentTime
       let feed = parseFeedSource $ response ^. responseBody
           delta = feedEntryDelta now =<< feed
           feedItems = feedToItems feed
       return (delta, Right feedItems)
-  where options = defaults & header "Accept" .~ ["application/atom+xml", "application/rss+xml", "*/*"]
+  where
+    options = defaults & header "Accept" .~ ["application/atom+xml", "application/rss+xml", "*/*"]
 
-feedThread :: T.Text -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
+feedThread :: Nick -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
 feedThread nick configMVar isFirstTime bloom chan =
   withCurrentBotConfig nick configMVar $ \BotConfig {botDelay, botFeed} -> do
     defaultDelay <- configDefaultDelay <$> readMVar configMVar

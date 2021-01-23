@@ -16,26 +16,29 @@ import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import Data.BloomFilter (Bloom)
 import Data.ByteString (ByteString)
+import Data.CaseInsensitive (foldedCase, mk)
 import Data.Conduit
+import Data.Foldable (find)
 import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Text as T
+import Data.Text.Encoding (encodeUtf8)
 import qualified Network.IRC.Conduit as IRC
 import Safe (readMay)
 
 data ControllerCommand
-  = Info (IRC.ChannelName T.Text) (IRC.NickName T.Text)
+  = Info Channel Nick
   | Pinged (IRC.ServerName ByteString)
-  | SetUrl (IRC.NickName T.Text) T.Text
-  | Add (IRC.NickName T.Text) T.Text (Maybe (IRC.ChannelName ByteString))
-  | Remove (IRC.NickName T.Text)
-  | Tick (IRC.NickName T.Text) (Maybe Integer)
-  | Invite (IRC.ChannelName ByteString)
-  | Kick (IRC.ChannelName ByteString)
-  | Help (IRC.ChannelName T.Text)
-  | Subscribe (IRC.NickName T.Text {- subscriber -}) (IRC.NickName T.Text {- bot -})
-  | Unsubscribe (IRC.NickName T.Text {- subscriber -}) (IRC.NickName T.Text {- bot -})
-  | Dump (IRC.ChannelName T.Text)
+  | SetUrl Nick URL
+  | Add Nick URL (Maybe Channel)
+  | Remove Nick
+  | Tick Nick (Maybe Integer)
+  | Invite Channel
+  | Kick Channel
+  | Help Channel
+  | Subscribe Nick {- subscriber -} Nick {- bot -}
+  | Unsubscribe Nick {- subscriber -} Nick {- bot -}
+  | Dump Channel
   deriving (Show)
 
 controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
@@ -50,32 +53,32 @@ controllerThread bloom configMVar = do
           listen chan =
             forever $
               await >>= \case
-                Just (Right (IRC.Event _ _ (IRC.Invite channel _))) -> liftIO $ writeChan chan (Invite channel)
-                Just (Right (IRC.Event _ _ (IRC.Kick channel nick _))) | decodeUtf8 nick == controllerNick -> liftIO $ writeChan chan (Kick channel)
+                Just (Right (IRC.Event _ _ (IRC.Invite channel _))) -> liftIO $ writeChan chan $ Invite $ mk $ decodeUtf8 channel
+                Just (Right (IRC.Event _ _ (IRC.Kick channel nick _))) | mk (decodeUtf8 nick) == controllerNick -> liftIO $ writeChan chan $ Kick $ mk $ decodeUtf8 channel
                 Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
                 Just (Right (IRC.Event _ (IRC.User user) (IRC.Privmsg _ (Right message)))) ->
                   liftIO $ case T.words $ decodeUtf8 message of
-                    ["subscribe", nick] -> writeChan chan $ Subscribe (decodeUtf8 user) nick
-                    ["unsubscribe", nick] -> writeChan chan $ Unsubscribe (decodeUtf8 user) nick
-                    ["help"] -> writeChan chan (Help (decodeUtf8 user))
-                    ["info", nick] -> writeChan chan (Info (decodeUtf8 user) nick)
-                    ["dump"] -> writeChan chan (Dump (decodeUtf8 user))
+                    ["subscribe", nick] -> writeChan chan $ Subscribe (mk $ decodeUtf8 user) (mk nick)
+                    ["unsubscribe", nick] -> writeChan chan $ Unsubscribe (mk $ decodeUtf8 user) (mk nick)
+                    ["help"] -> writeChan chan $ Help $ mk $ decodeUtf8 user
+                    ["info", nick] -> writeChan chan $ Info (mk $ decodeUtf8 user) $ mk nick
+                    ["dump"] -> writeChan chan $ Dump $ mk $ decodeUtf8 user
                     _ -> pure ()
                 Just (Right (IRC.Event _ (IRC.Channel channel _) (IRC.Privmsg _ (Right message)))) ->
-                  liftIO $ case T.words <$> T.stripPrefix (controllerNick <> ":") (decodeUtf8 message) of
-                    Just ["dump"] -> writeChan chan (Dump (decodeUtf8 channel))
-                    Just ["help"] -> writeChan chan (Help (decodeUtf8 channel))
-                    Just ["info", nick] -> writeChan chan (Info (decodeUtf8 channel) nick)
-                    Just ["set-url", nick, url] -> writeChan chan (SetUrl nick url)
+                  liftIO $ case T.words <$> T.stripPrefix (foldedCase controllerNick <> ":") (decodeUtf8 message) of
+                    Just ["dump"] -> writeChan chan (Dump $ mk $ decodeUtf8 channel)
+                    Just ["help"] -> writeChan chan (Help $ mk $ decodeUtf8 channel)
+                    Just ["info", nick] -> writeChan chan (Info (mk $ decodeUtf8 channel) $ mk nick)
+                    Just ["set-url", nick, url] -> writeChan chan (SetUrl (mk nick) url)
                     Just ["add", nick, url]
                       | "http" `T.isPrefixOf` url && isValidIrcNick nick ->
                         writeChan chan $
-                          Add nick url $
-                            if decodeUtf8 channel == configChannel then Nothing else Just channel
-                    Just ["remove", nick] -> writeChan chan (Remove nick)
+                          Add (mk nick) url $
+                            if mk (decodeUtf8 channel) == configChannel then Nothing else Just $ mk $ decodeUtf8 channel
+                    Just ["remove", nick] -> writeChan chan $ Remove $ mk nick
                     Just ["tick", nick, tickString] ->
-                      writeChan chan (Tick nick $ readMay (T.unpack tickString))
-                    Just _ -> writeChan chan (Help (decodeUtf8 channel))
+                      writeChan chan $ Tick (mk nick) $ readMay $ T.unpack tickString
+                    Just _ -> writeChan chan $ Help $ mk $ decodeUtf8 channel
                     _ -> pure ()
                 _ -> pure ()
           speak chan = do
@@ -99,55 +102,53 @@ controllerThread bloom configMVar = do
                           "add NICK FEED_URL — add a new bot to all channels I am in",
                           "remove NICK — tell a bot to commit suicice",
                           "dump — upload the current config/state somewhere you can see it",
-                          "/msg " <> controllerNick <> " subscribe NICK — subscribe to private messages from a bot",
-                          "/msg " <> controllerNick <> " unsubscribe NICK — unsubscribe to private messages from a bot",
+                          "/msg " <> foldedCase controllerNick <> " subscribe NICK — subscribe to private messages from a bot",
+                          "/msg " <> foldedCase controllerNick <> " unsubscribe NICK — unsubscribe to private messages from a bot",
                           "/invite NICK — invite a bot from your channel",
                           "/kick NICK — remove a bot from your channel",
-                          "/invite " <> controllerNick <> " — invite the controller to your channel",
-                          "/kick " <> controllerNick <> " — kick the controller from your channel"
+                          "/invite " <> foldedCase controllerNick <> " — invite the controller to your channel",
+                          "/kick " <> foldedCase controllerNick <> " — kick the controller from your channel"
                         ]
                     Tick nick tick -> do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botDelayL .~ tick
                       notice nick ("change tick speed to " <> show tick)
                       channelsForNick <- botChannels nick <$> liftIO (readMVar configMVar)
-                      broadcastNotice channelsForNick $ nick <> " @ " <> T.pack (maybe "auto" ((<> " seconds") . show) tick)
+                      broadcastNotice channelsForNick $ foldedCase nick <> " @ " <> T.pack (maybe "auto" ((<> " seconds") . show) tick)
                     Add nick url extraChannel ->
                       case M.lookup nick configBots of
-                        Just BotConfig {botFeed} -> broadcast [maybe configChannel decodeUtf8 extraChannel] [nick <> " is already serving " <> botFeed]
+                        Just BotConfig {botFeed} -> broadcast [fromMaybe configChannel extraChannel] [foldedCase nick <> " is already serving " <> botFeed]
                         Nothing -> do
-                          liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (: []) . decodeUtf8 <$> extraChannel}
+                          liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (: []) <$> extraChannel}
                           _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
                           pure ()
                     Remove nick -> do
                       liftIO $ update configMVar $ configBotsL . at nick .~ Nothing
                       notice nick "remove"
                       channelsForNick <- botChannels nick <$> liftIO (readMVar configMVar)
-                      broadcastNotice channelsForNick $ nick <> " is expected to commit suicide soon"
+                      broadcastNotice channelsForNick $ foldedCase nick <> " is expected to commit suicide soon"
                     SetUrl nick url -> do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botFeedL .~ url
                       notice nick ("set url to " <> T.unpack url)
                       channelsForNick <- botChannels nick <$> liftIO (readMVar configMVar)
-                      broadcastNotice channelsForNick $ nick <> " -> " <> url
+                      broadcastNotice channelsForNick $ foldedCase nick <> " -> " <> url
                     Pinged serverName -> do
                       debug controllerNick ("pong " <> show serverName)
                       yield $ IRC.Pong serverName
                     Kick channel -> do
-                      let channel' = decodeUtf8 channel
-                      liftIO $ update configMVar $ configControllerL . mapped . controllerExtraChannelsL %~ delete channel'
-                      notice controllerNick $ "kicked from " <> T.unpack channel'
+                      liftIO $ update configMVar $ configControllerL . mapped . controllerExtraChannelsL %~ delete channel
+                      notice controllerNick $ "kicked from " <> show channel
                     Invite channel -> do
-                      let channel' = decodeUtf8 channel
-                      liftIO $ update configMVar $ configControllerL . mapped . controllerExtraChannelsL %~ insert channel'
-                      notice controllerNick $ "invited to " <> T.unpack channel'
-                      yield $ IRC.Join channel
+                      liftIO $ update configMVar $ configControllerL . mapped . controllerExtraChannelsL %~ insert channel
+                      notice controllerNick $ "invited to " <> show channel
+                      yield $ IRC.Join $ encodeUtf8 $ foldedCase channel
                     Subscribe user nick -> do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ insert user
-                      notice nick $ T.unpack user <> " has subscribed"
-                      broadcast [user] ["subscribed to " <> nick]
+                      notice nick $ T.unpack (foldedCase user) <> " has subscribed"
+                      broadcast [user] ["subscribed to " <> foldedCase nick]
                     Unsubscribe user nick -> do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ delete user
-                      notice nick $ T.unpack user <> " has unsubscribed"
-                      broadcast [user] ["unsubscribed from " <> nick]
+                      notice nick $ T.unpack (foldedCase user) <> " has unsubscribed"
+                      broadcast [user] ["unsubscribed from " <> foldedCase nick]
                     Dump channel ->
                       case configPastebin of
                         Just endpoint -> do
@@ -165,6 +166,6 @@ controllerThread bloom configMVar = do
                               | nick == controllerNick -> T.pack (show controllerChannels)
                               | otherwise ->
                                 case M.keys $ M.filter (\BotConfig {botExtraChannels} -> nick `elem` fromMaybe [] botExtraChannels) configBots of
-                                  [] -> nick <> " is neither bot nor subscriber"
-                                  subscriptions -> nick <> " has subscribed to " <> T.pack (show subscriptions)
+                                  [] -> foldedCase nick <> " is neither bot nor subscriber"
+                                  subscriptions -> foldedCase nick <> " has subscribed to " <> T.pack (show subscriptions)
        in withIrcConnection config listen speak
