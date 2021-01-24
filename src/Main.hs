@@ -2,10 +2,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 import Brockman.Bot.Controller (controllerThread)
 import Brockman.Types
-import Brockman.Util (debug, eloop, sleepSeconds)
+import Brockman.Util (eloop, sleepSeconds)
 import Control.Concurrent.MVar
 import Control.Monad (forever)
 import Data.Aeson
@@ -39,8 +40,9 @@ main = do
   configJSON <- LBS8.readFile configFile
   case eitherDecode configJSON of
     Right config -> do
-      debug "" (show config)
-      let bloom0 = Bloom.fromList (cheapHashes 17) (2 ^ 10 * 1000) [""]
+      debugM "brockman" (show config)
+      let gigaByte = (^) @Int @Int 2 10 * 1000
+          bloom0 = Bloom.fromList (cheapHashes 17) gigaByte [""]
       stateFile <- statePath config
       stateFileExists <- doesFileExist stateFile
       bloom <- newMVar bloom0

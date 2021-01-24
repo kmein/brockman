@@ -2,7 +2,7 @@
 
 module Brockman.Util where
 
-import Brockman.Types (Nick)
+import Brockman.Types (Encode (encode), Nick)
 import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
 import Control.Lens
@@ -10,12 +10,13 @@ import Control.Monad.IO.Class (MonadIO (..), liftIO)
 import Data.Aeson (ToJSON (toJSON))
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (all, uncons)
 import Data.ByteString.Lazy (toStrict)
-import Data.CaseInsensitive (foldedCase)
 import Data.Char (isAsciiLower, isAsciiUpper)
 import Data.List (delete, insert)
-import Data.Text (Text, all, uncons, unpack)
-import Data.Text.Encoding (decodeUtf8With)
+import Data.Text (Text, unpack)
+import qualified Data.Text as T (words)
+import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Network.Wreq (post, responseBody)
 import System.Log.Logger
 
@@ -30,26 +31,26 @@ eloop x =
     x
 
 sleepSeconds :: Integer -> IO ()
-sleepSeconds n = threadDelay (fromInteger n * 10 ^ 6)
+sleepSeconds n = threadDelay $ fromInteger (n * (^) @Integer @Integer 10 6)
 
 optionally :: Applicative f => (a -> f ()) -> Maybe a -> f ()
 optionally = maybe (pure ())
 
 notice :: MonadIO m => Nick -> String -> m ()
 notice nick message =
-  liftIO $ noticeM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
+  liftIO $ noticeM "brockman" ("[" <> show nick <> "] " <> message)
 
 debug :: MonadIO m => Nick -> String -> m ()
 debug nick message =
-  liftIO $ debugM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
+  liftIO $ debugM "brockman" ("[" <> show nick <> "] " <> message)
 
 warning :: MonadIO m => Nick -> String -> m ()
 warning nick message =
-  liftIO $ warningM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
+  liftIO $ warningM "brockman" ("[" <> show nick <> "] " <> message)
 
 error' :: MonadIO m => Nick -> String -> m ()
 error' nick message =
-  liftIO $ errorM "brockman" ("[" <> unpack (foldedCase nick) <> "] " <> message)
+  liftIO $ errorM "brockman" ("[" <> show nick <> "] " <> message)
 
 suicide :: IO ()
 suicide = killThread =<< myThreadId
@@ -70,12 +71,15 @@ delete value list = case Data.List.delete value <$> list of
   Just [] -> Nothing
   Just xs -> Just xs
 
+bsWords :: ByteString -> [ByteString]
+bsWords = map encodeUtf8 . T.words . decodeUtf8
+
 -- as defined in https://tools.ietf.org/html/rfc1459#page-9
-isValidIrcNick :: Text -> Bool
+isValidIrcNick :: Nick -> Bool
 isValidIrcNick nick =
-  case Data.Text.uncons nick of
+  case Data.ByteString.Char8.uncons $ encode nick of
     Nothing -> False
-    Just (first, rest) -> isLetter first && Data.Text.all (\c -> isLetter c || isNumber c || isSpecial c) rest
+    Just (first, rest) -> isLetter first && Data.ByteString.Char8.all (\c -> isLetter c || isNumber c || isSpecial c) rest
   where
     isLetter c = isAsciiLower c || isAsciiUpper c
     isNumber c = c `elem` ("0123456789" :: String)

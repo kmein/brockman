@@ -19,17 +19,16 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.BloomFilter (Bloom)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
-import Data.CaseInsensitive (foldedCase, mk)
 import Data.Conduit
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
-import Data.Text.Encoding (encodeUtf8)
 import Data.Time.Clock (getCurrentTime)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest), HttpExceptionContent (ConnectionFailure, StatusCodeException))
 import qualified Network.IRC.Conduit as IRC
 import Network.Socket (HostName)
 import Network.Wreq (FormParam ((:=)), defaults, getWith, header, post, responseBody, responseStatus, statusCode, statusMessage)
+import System.Log.Logger
 import System.Random (randomRIO)
 import Text.Feed.Import (parseFeedSource)
 
@@ -51,13 +50,13 @@ reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> Nick -> I
 reporterThread bloom configMVar nick = do
   config@BrockmanConfig {configChannel, configShortener} <- readMVar configMVar
   withIrcConnection config listen $ \chan -> do
-    withCurrentBotConfig nick configMVar $ \BotConfig {botExtraChannels} -> do
-      handshake nick (configChannel : fromMaybe [] botExtraChannels)
+    withCurrentBotConfig nick configMVar $ \initialBotConfig -> do
+      handshake nick $ configChannel : fromMaybe [] (botExtraChannels initialBotConfig)
       deafen nick
       _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
       forever $
-        withCurrentBotConfig nick configMVar $ \BotConfig {botExtraChannels} -> do
-          let botChannels = configChannel : fromMaybe [] botExtraChannels
+        withCurrentBotConfig nick configMVar $ \_ -> do
+          channels <- botChannels nick <$> liftIO (readMVar configMVar)
           command <- liftIO (readChan chan)
           debug nick $ show command
           case command of
@@ -67,26 +66,26 @@ reporterThread bloom configMVar nick = do
             NewFeedItem item -> do
               item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
               debug nick ("sending " <> show (display item'))
-              broadcast botChannels [display item']
+              broadcast channels [display item']
             Exception message ->
-              broadcastNotice botChannels message
+              broadcastNotice channels message
             Kicked channel -> do
               liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ delete channel
               notice nick $ "kicked from " <> show channel
             Invited channel -> do
               liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ insert channel
               notice nick $ "invited to " <> show channel
-              yield $ IRC.Join $ encodeUtf8 $ foldedCase channel
+              yield $ IRC.Join $ encode channel
   where
     listen chan =
       forever $
         await >>= \case
           Just (Right (IRC.Event _ _ (IRC.Ping s _))) -> liftIO $ writeChan chan (Pinged s)
           Just (Right (IRC.Event _ _ (IRC.Invite channel _))) ->
-            liftIO $ writeChan chan $ Invited $ mk $ decodeUtf8 channel
+            liftIO $ writeChan chan $ Invited $ decode channel
           Just (Right (IRC.Event _ _ (IRC.Kick channel nick' _)))
-            | nick == mk (decodeUtf8 nick') ->
-              liftIO $ writeChan chan $ Kicked $ mk $ decodeUtf8 channel
+            | nick == decode nick' ->
+              liftIO $ writeChan chan $ Kicked $ decode channel
           _ -> pure ()
 
 getFeed :: URL -> IO (Maybe Integer, Either T.Text [FeedItem])
@@ -142,6 +141,6 @@ feedThread nick configMVar isFirstTime bloom chan =
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
-  debug "" ("Shortening " <> show item <> " with " <> show url)
+  debugM "brockman" ("Shortening " <> show item <> " with " <> show url)
   r <- post url ["uri" := itemLink item]
   pure item {itemLink = decodeUtf8 $ BL.toStrict $ r ^. responseBody}

@@ -1,11 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Brockman.Feed where
 
 import Control.Applicative (Alternative (..))
 import Control.Concurrent.MVar
-import Control.Monad (join)
 import Data.BloomFilter (Bloom)
 import qualified Data.BloomFilter as Bloom (insertList, notElem)
 import qualified Data.ByteString as BS (ByteString)
@@ -41,22 +41,23 @@ feedEntryUtc item =
   zonedTimeToUTC
     <$> ( parseTime
             =<< case item of
-              Feed.RSSItem item -> rssItemPubDate item
-              Feed.AtomItem item -> Just $ entryUpdated item
+              Feed.RSSItem rssItem -> rssItemPubDate rssItem
+              Feed.AtomItem atomItem -> Just $ entryUpdated atomItem
               _ -> Nothing
         )
   where
     parseTime x = parseTimeRFC822 x <|> parseTimeRFC3339 x
 
 averageDelta :: [UTCTime] -> Maybe Integer
-averageDelta times = fmap (`div` (10 ^ 12)) $ mean $ map (unFixed . nominalDiffTimeToSeconds) $ zipWith diffUTCTime times' (tail times')
+averageDelta times = fmap (`div` pico) $ mean $ map (unFixed . nominalDiffTimeToSeconds) $ zipWith diffUTCTime times' (tail times')
   where
+    pico = (^) @Integer @Integer 10 12
     times' = take 10 $ reverse $ nubBy sameMinute $ sort times
     sameMinute time1 time2 = abs (diffUTCTime time1 time2) < secondsToNominalDiffTime 60
     unFixed (MkFixed x) = x
     mean xs
       | null xs = Nothing
-      | otherwise = Just $ round $ fromIntegral (sum xs) / fromIntegral (length xs)
+      | otherwise = Just $ round @Double $ fromIntegral (sum xs) / fromIntegral (length xs)
 
 feedEntryDelta :: UTCTime -> Feed.Feed -> Maybe Integer
 feedEntryDelta now = averageDelta . (:) now . mapMaybe feedEntryUtc . feedItems

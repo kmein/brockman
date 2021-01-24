@@ -10,22 +10,52 @@ import Control.Lens
 import Data.Aeson hiding ((.=))
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Types
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BL
 import Data.CaseInsensitive
 import Data.Char (isLower, toLower)
 import Data.Map (Map, lookup)
 import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import qualified Network.IRC.Conduit as IRC
 import System.Directory (getHomeDirectory)
 import System.FilePath ((</>))
 
+class Decode a where decode :: ByteString -> a
+
+class Encode a where encode :: a -> ByteString
+
 type URL = Text
 
-type Nick = IRC.NickName (CI Text)
+newtype Nick = Nick {unNick :: IRC.NickName (CI Text)} deriving (Eq, Ord)
 
-type Channel = IRC.ChannelName (CI Text)
+instance Show Nick where show = show . unNick
+
+instance FromJSON Nick where parseJSON = fmap (Nick . mk) . parseJSON
+
+instance ToJSON Nick where toJSON = toJSON . foldedCase . unNick
+
+instance ToJSONKey Nick where toJSONKey = toJSONKeyText (foldedCase . unNick)
+
+instance FromJSONKey Nick where fromJSONKey = FromJSONKeyText (Nick . mk)
+
+instance Decode Nick where decode = Nick . mk . decodeUtf8
+
+instance Encode Nick where encode = encodeUtf8 . foldedCase . unNick
+
+newtype Channel = Channel {unChannel :: IRC.ChannelName (CI Text)} deriving (Eq, Ord)
+
+instance Show Channel where show = show . unChannel
+
+instance FromJSON Channel where parseJSON = fmap (Channel . mk) . parseJSON
+
+instance ToJSON Channel where toJSON = toJSON . foldedCase . unChannel
+
+instance Decode Channel where decode = Channel . mk . decodeUtf8
+
+instance Encode Channel where encode = encodeUtf8 . foldedCase . unChannel
 
 configBotsL :: Lens' BrockmanConfig (Map Nick BotConfig)
 configBotsL = lens configBots (\config bots -> config {configBots = bots})
@@ -105,18 +135,6 @@ myOptions =
       \case
         [] -> []
         (x : xs) -> toLower x : xs
-
-instance (FoldCase a, FromJSON a) => FromJSON (CI a) where
-  parseJSON = fmap mk . parseJSON
-
-instance ToJSON a => ToJSON (CI a) where
-  toJSON = toJSON . foldedCase
-
-instance ToJSONKey (CI Text) where
-  toJSONKey = toJSONKeyText foldedCase
-
-instance FromJSONKey (CI Text) where
-  fromJSONKey = FromJSONKeyText mk
 
 instance FromJSON BrockmanConfig where
   parseJSON = genericParseJSON myOptions
