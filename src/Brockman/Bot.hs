@@ -32,6 +32,9 @@ handshake nick channels = do
   yield $ IRC.RawMsg $ encodeUtf8 $ "USER " <> foldedCase nick <> " * 0 :" <> foldedCase nick
   mapM_ (yield . IRC.Join . encodeUtf8 . foldedCase) channels
 
+deafen :: Nick -> ConduitM () IRC.IrcMessage IO ()
+deafen nick = yield $ IRC.Mode (encodeUtf8 $ foldedCase nick) False [] ["+D"] -- deafen to PRIVMSGs
+
 -- maybe join channels separated by comma
 
 broadcastNotice :: Monad m => [Channel] -> T.Text -> ConduitT i (IRC.Message ByteString) m ()
