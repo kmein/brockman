@@ -1,7 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TupleSections #-}
 
 module Brockman.Feed where
 
@@ -24,13 +23,13 @@ import Text.RSS.Syntax (RSSItem (rssItemPubDate))
 import qualified Text.RSS.Syntax as RSS
 import qualified Text.RSS1.Syntax as RSS1
 
-type LRU = LRU.LRU FeedItem ()
+type LRU = LRU.LRU Text ()
 
 data FeedItem = FeedItem
   { itemTitle :: Text,
     itemLink :: Text
   }
-  deriving (Show, Ord, Eq)
+  deriving (Show)
 
 display :: FeedItem -> Text
 display item = Data.Text.unwords [strip $ itemLink item, decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item]
@@ -81,13 +80,13 @@ deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
 deduplicate maybeLRU items =
   case maybeLRU of
     Nothing ->
-      let freshLru = LRU.fromList (Just $ genericLength items * 2) $ map (, ()) items
+      let freshLru = LRU.fromList (Just $ genericLength items * 2) $ map (\i -> (itemLink i, ())) items
       in (freshLru, [])
     Just lru ->
       foldl step (lru, []) items
   where
     step (lru, items') item =
-      let (newLru, maybeItem) = LRU.lookup item lru
+      let (newLru, maybeItem) = LRU.lookup (itemLink item) lru
       in case maybeItem of
-        Nothing -> (LRU.insert item () newLru, item : items')
+        Nothing -> (LRU.insert (itemLink item) () newLru, item : items')
         Just () -> (newLru, items')
