@@ -1,12 +1,11 @@
 {
   "channel": "#news",
   "irc": {
-    "host": "irc.r"
+    "host": "localhost"
   },
   "controller": {
     "nick": "brockman"
   },
-  "shortener": "http://go",
   "bots": {
     "achan": {
       "feed": "http://boards.4channel.org/a/index.rss",
