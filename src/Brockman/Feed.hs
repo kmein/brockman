@@ -5,15 +5,11 @@
 module Brockman.Feed where
 
 import Control.Applicative (Alternative (..))
-import Control.Concurrent.MVar
-import Data.BloomFilter (Bloom)
-import qualified Data.BloomFilter as Bloom (insertList, notElem)
-import qualified Data.ByteString as BS (ByteString)
 import Data.Fixed
 import Data.List
+import qualified Data.Cache.LRU as LRU
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, intercalate, lines, pack, strip, unwords)
-import qualified Data.Text.Encoding as Text (encodeUtf8)
 import Data.Time.Clock
 import Data.Time.LocalTime (zonedTimeToUTC)
 import Data.Time.RFC3339 (parseTimeRFC3339)
@@ -31,7 +27,7 @@ data FeedItem = FeedItem
   { itemTitle :: Text,
     itemLink :: Text
   }
-  deriving (Show)
+  deriving (Show, Ord, Eq)
 
 display :: FeedItem -> Text
 display item = Data.Text.unwords [strip $ itemLink item, decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item]
@@ -78,9 +74,18 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
         Just $ FeedItem (RSS1.itemTitle item) (RSS1.itemLink item)
       _ -> Nothing
 
-deduplicate :: MVar (Bloom BS.ByteString) -> [FeedItem] -> IO [FeedItem]
-deduplicate var items =
-  modifyMVar var $ \bloom ->
-    let bloom' = Bloom.insertList (map (Text.encodeUtf8 . itemLink) items) bloom
-        items' = filter (flip Bloom.notElem bloom . Text.encodeUtf8 . itemLink) items
-     in pure (bloom', items')
+deduplicate :: Maybe (LRU.LRU FeedItem val) -> [FeedItem] -> (LRU.LRU FeedItem val, [FeedItem])
+deduplicate maybeLRU items =
+  case maybeLRU of
+    Nothing ->
+      let items' = (map (\i -> (i, undefined)) items)
+          lru' = LRU.fromList (Just $ toInteger (length items) * 2) items'
+      in (lru', [])
+    Just lru ->
+      foldl (\(lru', items') -> \item -> case LRU.lookup item lru' of
+        (lru'', Nothing) ->
+          let
+            lru''' = LRU.insert item undefined lru''
+          in (lru''', items' ++ [ item ])
+        (lru'', Just _) -> (lru'', items'))
+      (lru, []) items
