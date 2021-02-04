@@ -15,6 +15,7 @@ import qualified Data.ByteString.Lazy as BL
 import Data.CaseInsensitive
 import Data.Char (isLower, toLower)
 import Data.Map (Map, lookup)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Typeable (Typeable)
@@ -76,7 +77,7 @@ botExtraChannelsL :: Lens' BotConfig (Maybe [Channel])
 botExtraChannelsL = lens botExtraChannels (\bot channels -> bot {botExtraChannels = channels})
 
 botChannels :: Nick -> BrockmanConfig -> [Channel]
-botChannels nick config = maybe [] (configChannel config :) $ botExtraChannels =<< Data.Map.lookup nick (configBots config)
+botChannels nick config = (configChannel config :) $ fromMaybe [] $ botExtraChannels =<< Data.Map.lookup nick (configBots config)
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Nick BotConfig,
