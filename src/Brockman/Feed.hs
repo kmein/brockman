@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TupleSections #-}
 
 module Brockman.Feed where
 
@@ -78,14 +79,13 @@ deduplicate :: Maybe (LRU.LRU FeedItem val) -> [FeedItem] -> (LRU.LRU FeedItem v
 deduplicate maybeLRU items =
   case maybeLRU of
     Nothing ->
-      let items' = (map (\i -> (i, undefined)) items)
-          lru' = LRU.fromList (Just $ toInteger (length items) * 2) items'
-      in (lru', [])
+      let freshLru = LRU.fromList (Just $ genericLength items * 2) $ map (, undefined) items
+      in (freshLru, [])
     Just lru ->
-      foldl (\(lru', items') -> \item -> case LRU.lookup item lru' of
-        (lru'', Nothing) ->
-          let
-            lru''' = LRU.insert item undefined lru''
-          in (lru''', items' ++ [ item ])
-        (lru'', Just _) -> (lru'', items'))
-      (lru, []) items
+      foldl step (lru, []) items
+  where
+    step (lru, items') item =
+      let (newLru, maybeItem) = LRU.lookup item lru
+      in case maybeItem of
+        Nothing -> (LRU.insert item undefined newLru, item : items')
+        Just _ -> (newLru, items')
