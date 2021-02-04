@@ -4,14 +4,7 @@
 
   services.brockman = {
     enable = true;
-    config = {
-      irc.host = "localhost";
-      bots.bchan = {
-        feed = "http://boards.4channel.org/b/index.rss";
-        channels = [ "#news" ];
-        delay = 500;
-      };
-    };
+    config = builtins.fromJSON (builtins.readFile ../config/example.json);
   };
 
   systemd.services.brockman.environment.BROCKMAN_LOG_LEVEL = "DEBUG";

@@ -10,8 +10,6 @@ import Brockman.Util (eloop, sleepSeconds)
 import Control.Concurrent.MVar
 import Control.Monad (forever)
 import Data.Aeson
-import qualified Data.BloomFilter as Bloom (fromList)
-import Data.BloomFilter.Hash (cheapHashes)
 import qualified Data.ByteString.Lazy.Char8 as LBS8 (readFile)
 import Data.Maybe (fromMaybe)
 import Options.Applicative
@@ -41,11 +39,8 @@ main = do
   case eitherDecode configJSON of
     Right config -> do
       debugM "brockman" (show config)
-      let gigaByte = (^) @Int @Int 2 10 * 1000
-          bloom0 = Bloom.fromList (cheapHashes 17) gigaByte [""]
       stateFile <- statePath config
       stateFileExists <- doesFileExist stateFile
-      bloom <- newMVar bloom0
       config' <-
         if stateFileExists
           then do
@@ -54,6 +49,6 @@ main = do
               Right config' -> config' <$ warningM [] "Parsed state file, resuming"
               Left _ -> config <$ warningM [] "State file is corrupt, reverting to config"
           else config <$ warningM [] "No state file exists yet, starting with config"
-      eloop $ controllerThread bloom =<< newMVar config'
+      eloop $ controllerThread =<< newMVar config'
       forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err

@@ -15,7 +15,6 @@ import Control.Concurrent.MVar
 import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
-import Data.BloomFilter (Bloom)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Conduit
@@ -40,10 +39,10 @@ data ControllerCommand
   | Dump Channel
   deriving (Show)
 
-controllerThread :: MVar (Bloom ByteString) -> MVar BrockmanConfig -> IO ()
-controllerThread bloom configMVar = do
+controllerThread :: MVar BrockmanConfig -> IO ()
+controllerThread configMVar = do
   initialConfig <- readMVar configMVar
-  mapM_ (forkIO . eloop . reporterThread bloom configMVar) $ M.keys $ configBots initialConfig
+  mapM_ (forkIO . eloop . reporterThread configMVar) $ M.keys $ configBots initialConfig
   case configController initialConfig of
     Nothing -> pure ()
     Just initialControllerConfig@ControllerConfig {controllerNick} ->
@@ -117,7 +116,7 @@ controllerThread bloom configMVar = do
                         Just BotConfig {botFeed} -> broadcast [fromMaybe configChannel extraChannel] [T.pack (show nick) <> " is already serving " <> botFeed]
                         Nothing -> do
                           liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (: []) <$> extraChannel}
-                          _ <- liftIO $ forkIO $ eloop $ reporterThread bloom configMVar nick
+                          _ <- liftIO $ forkIO $ eloop $ reporterThread configMVar nick
                           pure ()
                     Remove nick -> do
                       liftIO $ update configMVar $ configBotsL . at nick .~ Nothing

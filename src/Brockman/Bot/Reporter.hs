@@ -16,7 +16,6 @@ import qualified Control.Exception as E
 import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.BloomFilter (Bloom)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
 import Data.Conduit
@@ -46,14 +45,14 @@ withCurrentBotConfig nick configMVar handler = do
   BrockmanConfig {configBots} <- liftIO $ readMVar configMVar
   maybe (liftIO suicide) handler $ M.lookup nick configBots
 
-reporterThread :: MVar (Bloom BS.ByteString) -> MVar BrockmanConfig -> Nick -> IO ()
-reporterThread bloom configMVar nick = do
+reporterThread :: MVar BrockmanConfig -> Nick -> IO ()
+reporterThread configMVar nick = do
   config@BrockmanConfig {configChannel, configShortener} <- readMVar configMVar
   withIrcConnection config listen $ \chan -> do
     withCurrentBotConfig nick configMVar $ \initialBotConfig -> do
       handshake nick $ configChannel : fromMaybe [] (botExtraChannels initialBotConfig)
       deafen nick
-      _ <- liftIO $ forkIO $ feedThread nick configMVar True bloom chan
+      _ <- liftIO $ forkIO $ feedThread nick configMVar True Nothing chan
       forever $
         withCurrentBotConfig nick configMVar $ \_ -> do
           channels <- botChannels nick <$> liftIO (readMVar configMVar)
@@ -110,8 +109,8 @@ getFeed url =
   where
     options = defaults & header "Accept" .~ ["application/atom+xml", "application/rss+xml", "*/*"]
 
-feedThread :: Nick -> MVar BrockmanConfig -> Bool -> MVar (Bloom BS.ByteString) -> Chan ReporterMessage -> IO ()
-feedThread nick configMVar isFirstTime bloom chan =
+feedThread :: Nick -> MVar BrockmanConfig -> Bool -> Maybe LRU -> Chan ReporterMessage -> IO ()
+feedThread nick configMVar isFirstTime lru chan =
   withCurrentBotConfig nick configMVar $ \BotConfig {botDelay, botFeed} -> do
     defaultDelay <- configDefaultDelay <$> readMVar configMVar
     let delaySeconds = fromMaybe fallbackDelay $ botDelay <|> defaultDelay
@@ -122,20 +121,22 @@ feedThread nick configMVar isFirstTime bloom chan =
         sleepSeconds randomDelay
     debug nick ("fetch " <> T.unpack botFeed)
     (newTick, exceptionOrFeed) <- liftIO $ getFeed botFeed
-    case exceptionOrFeed of
+    newLRU <- case exceptionOrFeed of
       Left message -> do
         error' nick $ "exception" <> T.unpack message
         writeChan chan $ Exception $ message <> " — " <> botFeed
+        return lru
       Right feedItems -> do
-        items <- liftIO $ deduplicate bloom feedItems
+        let (lru', items) = deduplicate lru feedItems
         when (null feedItems) $ do
           warning nick $ "Feed is empty: " <> T.unpack botFeed
           writeChan chan $ Exception $ "feed is empty: " <> botFeed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
+        return $ Just lru'
     let tick = max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
     notice nick $ "tick " <> show tick
     liftIO $ sleepSeconds tick
-    feedThread nick configMVar False bloom chan
+    feedThread nick configMVar False newLRU chan
   where
     fallbackDelay = 300
 

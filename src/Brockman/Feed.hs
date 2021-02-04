@@ -1,19 +1,16 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TupleSections #-}
 
 module Brockman.Feed where
 
 import Control.Applicative (Alternative (..))
-import Control.Concurrent.MVar
-import Data.BloomFilter (Bloom)
-import qualified Data.BloomFilter as Bloom (insertList, notElem)
-import qualified Data.ByteString as BS (ByteString)
 import Data.Fixed
 import Data.List
+import qualified Data.Cache.LRU as LRU
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, intercalate, lines, pack, strip, unwords)
-import qualified Data.Text.Encoding as Text (encodeUtf8)
 import Data.Time.Clock
 import Data.Time.LocalTime (zonedTimeToUTC)
 import Data.Time.RFC3339 (parseTimeRFC3339)
@@ -27,11 +24,13 @@ import Text.RSS.Syntax (RSSItem (rssItemPubDate))
 import qualified Text.RSS.Syntax as RSS
 import qualified Text.RSS1.Syntax as RSS1
 
+type LRU = LRU.LRU FeedItem ()
+
 data FeedItem = FeedItem
   { itemTitle :: Text,
     itemLink :: Text
   }
-  deriving (Show)
+  deriving (Show, Ord, Eq)
 
 display :: FeedItem -> Text
 display item = Data.Text.unwords [strip $ itemLink item, decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item]
@@ -78,9 +77,17 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
         Just $ FeedItem (RSS1.itemTitle item) (RSS1.itemLink item)
       _ -> Nothing
 
-deduplicate :: MVar (Bloom BS.ByteString) -> [FeedItem] -> IO [FeedItem]
-deduplicate var items =
-  modifyMVar var $ \bloom ->
-    let bloom' = Bloom.insertList (map (Text.encodeUtf8 . itemLink) items) bloom
-        items' = filter (flip Bloom.notElem bloom . Text.encodeUtf8 . itemLink) items
-     in pure (bloom', items')
+deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
+deduplicate maybeLRU items =
+  case maybeLRU of
+    Nothing ->
+      let freshLru = LRU.fromList (Just $ genericLength items * 2) $ map (, ()) items
+      in (freshLru, [])
+    Just lru ->
+      foldl step (lru, []) items
+  where
+    step (lru, items') item =
+      let (newLru, maybeItem) = LRU.lookup item lru
+      in case maybeItem of
+        Nothing -> (LRU.insert item () newLru, item : items')
+        Just () -> (newLru, items')
