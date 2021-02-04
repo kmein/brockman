@@ -16,7 +16,6 @@ import qualified Control.Exception as E
 import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import qualified Data.Cache.LRU as LRU
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
 import Data.Conduit
@@ -110,7 +109,7 @@ getFeed url =
   where
     options = defaults & header "Accept" .~ ["application/atom+xml", "application/rss+xml", "*/*"]
 
-feedThread :: Nick -> MVar BrockmanConfig -> Bool -> Maybe (LRU.LRU FeedItem val) -> Chan ReporterMessage -> IO ()
+feedThread :: Nick -> MVar BrockmanConfig -> Bool -> Maybe LRU -> Chan ReporterMessage -> IO ()
 feedThread nick configMVar isFirstTime lru chan =
   withCurrentBotConfig nick configMVar $ \BotConfig {botDelay, botFeed} -> do
     defaultDelay <- configDefaultDelay <$> readMVar configMVar

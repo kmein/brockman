@@ -24,6 +24,8 @@ import Text.RSS.Syntax (RSSItem (rssItemPubDate))
 import qualified Text.RSS.Syntax as RSS
 import qualified Text.RSS1.Syntax as RSS1
 
+type LRU = LRU.LRU FeedItem ()
+
 data FeedItem = FeedItem
   { itemTitle :: Text,
     itemLink :: Text
@@ -75,11 +77,11 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
         Just $ FeedItem (RSS1.itemTitle item) (RSS1.itemLink item)
       _ -> Nothing
 
-deduplicate :: Maybe (LRU.LRU FeedItem val) -> [FeedItem] -> (LRU.LRU FeedItem val, [FeedItem])
+deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
 deduplicate maybeLRU items =
   case maybeLRU of
     Nothing ->
-      let freshLru = LRU.fromList (Just $ genericLength items * 2) $ map (, undefined) items
+      let freshLru = LRU.fromList (Just $ genericLength items * 2) $ map (, ()) items
       in (freshLru, [])
     Just lru ->
       foldl step (lru, []) items
@@ -87,5 +89,5 @@ deduplicate maybeLRU items =
     step (lru, items') item =
       let (newLru, maybeItem) = LRU.lookup item lru
       in case maybeItem of
-        Nothing -> (LRU.insert item undefined newLru, item : items')
-        Just _ -> (newLru, items')
+        Nothing -> (LRU.insert item () newLru, item : items')
+        Just () -> (newLru, items')
