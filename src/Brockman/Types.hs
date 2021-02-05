@@ -88,7 +88,8 @@ data BrockmanConfig = BrockmanConfig
     configController :: Maybe ControllerConfig,
     configStatePath :: Maybe FilePath,
     configPastebin :: Maybe URL,
-    configDefaultDelay :: Maybe Integer
+    configDefaultDelay :: Maybe Integer,
+    configMaxStartDelay :: Maybe Integer
   }
   deriving (Generic, Show, Typeable)
 
