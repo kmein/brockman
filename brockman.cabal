@@ -21,6 +21,7 @@ executable brockman
     directory,
     feed,
     filepath,
+    hashable,
     hslogger,
     html-entity,
     http-client,
