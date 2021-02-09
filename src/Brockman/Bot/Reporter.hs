@@ -114,6 +114,7 @@ feedThread nick configMVar isFirstTime lru chan =
   withCurrentBotConfig nick configMVar $ \BotConfig {botDelay, botFeed} -> do
     defaultDelay <- configDefaultDelay <$> readMVar configMVar
     maxStartDelay <- configMaxStartDelay <$> readMVar configMVar
+    notifyErrors <- configNotifyErrors <$> readMVar configMVar
     liftIO $
       when isFirstTime $ do
         randomDelay <- randomRIO (0, fromMaybe 60 maxStartDelay)
@@ -124,7 +125,7 @@ feedThread nick configMVar isFirstTime lru chan =
     newLRU <- case exceptionOrFeed of
       Left message -> do
         error' nick $ "exception" <> T.unpack message
-        writeChan chan $ Exception $ message <> " — " <> botFeed
+        when (fromMaybe True notifyErrors) $ writeChan chan $ Exception $ message <> " — " <> botFeed
         return lru
       Right feedItems -> do
         let (lru', items) = deduplicate lru feedItems
