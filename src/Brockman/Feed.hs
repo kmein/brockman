@@ -7,7 +7,9 @@ module Brockman.Feed where
 import Control.Applicative (Alternative (..))
 import Data.Fixed
 import Data.List
-import qualified Data.Cache.LRU as LRU
+import qualified Data.LruCache as LRU
+import Data.LruCache.Internal (LruCache (lruCapacity))
+import Data.Hashable (hash)
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, intercalate, lines, pack, strip, unwords)
 import Data.Time.Clock
@@ -23,7 +25,7 @@ import Text.RSS.Syntax (RSSItem (rssItemPubDate))
 import qualified Text.RSS.Syntax as RSS
 import qualified Text.RSS1.Syntax as RSS1
 
-type LRU = LRU.LRU Text ()
+type LRU = LRU.LruCache Int Bool
 
 data FeedItem = FeedItem
   { itemTitle :: Text,
@@ -80,13 +82,17 @@ deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
 deduplicate maybeLRU items =
   case maybeLRU of
     Nothing ->
-      let freshLru = LRU.fromList (Just $ genericLength items * 2) $ map (\i -> (itemLink i, ())) items
-      in (freshLru, [])
+      freshLru
     Just lru ->
-      foldl step (lru, []) items
+      if lruCapacity lru < genericLength items then
+        freshLru
+      else
+        insertItems lru items
   where
+    freshLru = insertItems (LRU.empty (genericLength items * 2)) items
+    key = hash . itemLink
+    insertItems lru items' = foldl' step (lru, []) items'
     step (lru, items') item =
-      let (newLru, maybeItem) = LRU.lookup (itemLink item) lru
-      in case maybeItem of
-        Nothing -> (LRU.insert (itemLink item) () newLru, item : items')
-        Just () -> (newLru, items')
+      case LRU.lookup (key item) lru of
+        Nothing -> (LRU.insert (key item) False lru, item : items')
+        Just (False, newLru) -> (newLru, items')

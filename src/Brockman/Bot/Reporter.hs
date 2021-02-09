@@ -113,10 +113,10 @@ feedThread :: Nick -> MVar BrockmanConfig -> Bool -> Maybe LRU -> Chan ReporterM
 feedThread nick configMVar isFirstTime lru chan =
   withCurrentBotConfig nick configMVar $ \BotConfig {botDelay, botFeed} -> do
     defaultDelay <- configDefaultDelay <$> readMVar configMVar
-    let delaySeconds = fromMaybe fallbackDelay $ botDelay <|> defaultDelay
+    maxStartDelay <- configMaxStartDelay <$> readMVar configMVar
     liftIO $
       when isFirstTime $ do
-        randomDelay <- randomRIO (0, delaySeconds)
+        randomDelay <- randomRIO (0, fromMaybe 60 maxStartDelay)
         debug nick $ "sleep " <> show randomDelay
         sleepSeconds randomDelay
     debug nick ("fetch " <> T.unpack botFeed)
