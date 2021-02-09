@@ -19,6 +19,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
 import Data.Conduit
+import Data.LruCache.Internal (LruCache (lruCapacity))
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
@@ -135,6 +136,7 @@ feedThread nick configMVar isFirstTime lru chan =
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
         return $ Just lru'
     let tick = max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
+    debug nick $ "lrusize: " <> show (maybe 0 lruCapacity newLRU)
     notice nick $ "tick " <> show tick
     liftIO $ sleepSeconds tick
     feedThread nick configMVar False newLRU chan
