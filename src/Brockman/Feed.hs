@@ -6,10 +6,10 @@ module Brockman.Feed where
 
 import Control.Applicative (Alternative (..))
 import Data.Fixed
+import Data.Hashable (hash)
 import Data.List
 import qualified Data.LruCache as LRU
 import Data.LruCache.Internal (LruCache (lruCapacity))
-import Data.Hashable (hash)
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, intercalate, lines, pack, strip, unwords)
 import Data.Time.Clock
@@ -84,10 +84,9 @@ deduplicate maybeLRU items =
     Nothing ->
       freshLru
     Just lru ->
-      if lruCapacity lru < genericLength items then
-        freshLru
-      else
-        insertItems lru items
+      if lruCapacity lru < genericLength items
+        then freshLru
+        else insertItems lru items
   where
     freshLru = insertItems (LRU.empty (genericLength items * 2)) items
     key = hash . itemLink
