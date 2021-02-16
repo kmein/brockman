@@ -25,7 +25,7 @@ import Text.RSS.Syntax (RSSItem (rssItemPubDate))
 import qualified Text.RSS.Syntax as RSS
 import qualified Text.RSS1.Syntax as RSS1
 
-type LRU = LRU.LruCache Int Bool
+type LRU = LRU.LruCache Int ()
 
 data FeedItem = FeedItem
   { itemTitle :: Text,
@@ -93,5 +93,5 @@ deduplicate maybeLRU items =
     insertItems lru items' = foldl' step (lru, []) items'
     step (lru, items') item =
       case LRU.lookup (key item) lru of
-        Nothing -> (LRU.insert (key item) False lru, item : items')
-        Just (False, newLru) -> (newLru, items')
+        Nothing -> (LRU.insert (key item) () lru, item : items')
+        Just ((), newLru) -> (newLru, items')
