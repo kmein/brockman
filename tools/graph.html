@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<head>
+  <title>brockman.r Graph</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+</head>
+<script>
+  const height = 1240;
+  const width = 1080;
+
+  color = (d) => {
+    if (d.id[0] == "#") return "gold";
+    else if (d.id.match(/^yt_/)) return "#FF0000";
+    else if (d.id.match(/^tw_/)) return "#1DA1F2";
+    else if (d.id.match(/^r_/)) return "#ff4301";
+    else if (d.id.match(/^t_/)) return "#0088CC";
+    else if (d.id.match(/^dlf_/)) return "#4ac96f";
+    else if (d.id.match(/^chan_/)) return "#800";
+    else if (d.id.match(/^so_/) || d.id.match(/_stackexchange/))
+      return "#f48024";
+    else return "grey";
+  };
+
+  drag = (simulation) => {
+    function dragstarted(event) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      event.subject.fx = event.subject.x;
+      event.subject.fy = event.subject.y;
+    }
+
+    function dragged(event) {
+      event.subject.fx = event.x;
+      event.subject.fy = event.y;
+    }
+
+    function dragended(event) {
+      if (!event.active) simulation.alphaTarget(0);
+      event.subject.fx = null;
+      event.subject.fy = null;
+    }
+
+    return d3
+      .drag()
+      .on("start", dragstarted)
+      .on("drag", dragged)
+      .on("end", dragended);
+  };
+
+  fetch("http://news.r")
+    .then((response) => response.json())
+    .then((config) => {
+      const nodes = [
+        { id: "#all" },
+        ...Object.keys(config.bots).map((nick) => ({ id: nick })),
+        ..._.uniqBy(
+          Object.entries(config.bots).flatMap(([nick, botConfig]) =>
+            (botConfig.extraChannels || []).map((channel) => ({ id: channel }))
+          ),
+          (x) => x.id
+        ),
+      ];
+
+      const links = Object.entries(config.bots).flatMap(([nick, botConfig]) => [
+        { source: nick, target: "#all", value: 1 },
+        ...(botConfig.extraChannels || []).map((channel) => ({
+          source: nick,
+          target: channel,
+          value: 1,
+        })),
+      ]);
+
+      const simulation = d3
+        .forceSimulation(nodes)
+        .force(
+          "link",
+          d3.forceLink(links).id((d) => d.id)
+        )
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+      const bodySelection = d3.select("body");
+      const svg = bodySelection
+        .append("svg")
+        .attr("viewBox", [0, 0, width, height]);
+
+      const link = svg
+        .append("g")
+        .attr("stroke", "#999")
+        .attr("stroke-opacity", 0.6)
+        .selectAll("line")
+        .data(links)
+        .join("line")
+        .attr("stroke-width", (d) => Math.sqrt(d.value));
+
+      const node = svg
+        .append("g")
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1.5)
+        .selectAll("circle")
+        .data(nodes)
+        .join("circle")
+        .attr("r", 5)
+        .attr("fill", color)
+        .call(drag(simulation));
+
+      node.append("title").text((d) => d.id);
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", (d) => d.source.x)
+          .attr("y1", (d) => d.source.y)
+          .attr("x2", (d) => d.target.x)
+          .attr("y2", (d) => d.target.y);
+
+        node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+      });
+
+      invalidation.then(() => simulation.stop());
+
+      return svg.node();
+    });
+</script>
