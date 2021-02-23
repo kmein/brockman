@@ -135,13 +135,14 @@ feedThread nick configMVar isFirstTime lru chan =
           writeChan chan $ Exception $ "feed is empty: " <> botFeed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
         return $ Just lru'
-    let tick = max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
+    tick <- scatterTick $ max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
     debug nick $ "lrusize: " <> show (maybe 0 lruCapacity newLRU)
     notice nick $ "tick " <> show tick
     liftIO $ sleepSeconds tick
     feedThread nick configMVar False newLRU chan
   where
     fallbackDelay = 300
+    scatterTick x = (+) (x `div` 2) <$> randomRIO (0, x `div` 2)
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
