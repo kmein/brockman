@@ -142,9 +142,7 @@ feedThread nick configMVar isFirstTime lru chan =
     feedThread nick configMVar False newLRU chan
   where
     fallbackDelay = 300
-    scatterTick x = do
-      randomPart <- randomRIO (0, x `div` 2)
-      return $ x `div` 2 + randomPart
+    scatterTick x = (+) (x `div` 2) <$> randomRIO (0, x `div` 2)
 
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
