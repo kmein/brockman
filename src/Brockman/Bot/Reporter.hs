@@ -27,7 +27,7 @@ import Data.Time.Clock (getCurrentTime)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest), HttpExceptionContent (ConnectionFailure, StatusCodeException))
 import qualified Network.IRC.Conduit as IRC
 import Network.Socket (HostName)
-import Network.Wreq (FormParam ((:=)), defaults, getWith, header, post, responseBody, responseStatus, statusCode, statusMessage)
+import Network.Wreq (FormParam ((:=)), defaults, getWith, header, postWith, responseBody, responseStatus, statusCode, statusMessage)
 import System.Log.Logger
 import System.Random (randomRIO)
 import Text.Feed.Import (parseFeedSource)
@@ -146,5 +146,6 @@ feedThread nick configMVar isFirstTime lru chan =
 shortenWith :: FeedItem -> HostName -> IO FeedItem
 item `shortenWith` url = do
   debugM "brockman" ("Shortening " <> show item <> " with " <> show url)
-  r <- post url ["uri" := itemLink item]
-  pure item {itemLink = decodeUtf8 $ BL.toStrict $ r ^. responseBody}
+  E.try (postWith defaults url ["uri" := itemLink item]) <&> \case
+    Left (E.SomeException _) -> item
+    Right response -> item {itemLink = decodeUtf8 $ BL.toStrict $ response ^. responseBody}
