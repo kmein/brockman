@@ -17,3 +17,5 @@ jobs:
       run: nix-shell -p haskellPackages.ormolu --run "find src/ -type f | xargs -n1 ormolu --mode check"
     - name: Build
       run: nix-build
+    - name: Validate configs
+      run: set -e && for config in ./config/*.json; do echo === checking "$config"; result/bin/brockman --check "$config"; done
