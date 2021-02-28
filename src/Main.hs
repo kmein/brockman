@@ -15,12 +15,12 @@ import Data.Maybe (fromMaybe)
 import Options.Applicative
 import System.Directory (doesFileExist)
 import System.Environment (lookupEnv)
+import System.Exit (exitFailure)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr)
 import System.Log.Logger
 import Text.Read
 
-data BrockmanOptions =
-  BrockmanOptions { configPath :: FilePath, checkOnly :: Bool }
+data BrockmanOptions = BrockmanOptions {configPath :: FilePath, checkOnly :: Bool}
 
 brockmanOptions :: Parser BrockmanOptions
 brockmanOptions = do
@@ -59,4 +59,4 @@ main = do
               else config <$ warningM [] "No state file exists yet, starting with config"
           eloop $ controllerThread =<< newMVar config'
           forever $ sleepSeconds 1
-    Left err -> errorM "brockman.main" err
+    Left err -> errorM "brockman.main" err >> exitFailure
