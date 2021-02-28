@@ -1,8 +1,8 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 import Brockman.Bot.Controller (controllerThread)
 import Brockman.Types
@@ -19,9 +19,14 @@ import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr)
 import System.Log.Logger
 import Text.Read
 
-brockmanOptions :: Parser FilePath
-brockmanOptions =
-  strArgument $ metavar "CONFIG-PATH" <> help "config file path"
+data BrockmanOptions =
+  BrockmanOptions { configPath :: FilePath, checkOnly :: Bool }
+
+brockmanOptions :: Parser BrockmanOptions
+brockmanOptions = do
+  configPath <- strArgument $ metavar "CONFIG-PATH" <> help "config file path"
+  checkOnly <- switch $ help "stop after validating the config" <> long "check" <> short 'c'
+  pure BrockmanOptions {..}
 
 main :: IO ()
 main = do
@@ -30,25 +35,28 @@ main = do
   updateGlobalLogger "brockman" (setLevel logLevel)
 
   hSetBuffering stderr LineBuffering
-  configFile <-
+  options <-
     execParser $
       info
         (helper <*> brockmanOptions)
         (fullDesc <> progDesc "Broadcast RSS feeds to IRC")
-  configJSON <- LBS8.readFile configFile
+  configJSON <- LBS8.readFile $ configPath options
   case eitherDecode configJSON of
     Right config -> do
-      debugM "brockman" (show config)
-      stateFile <- statePath config
-      stateFileExists <- doesFileExist stateFile
-      config' <-
-        if stateFileExists
-          then do
-            configJSON' <- LBS8.readFile stateFile
-            case eitherDecode configJSON' of
-              Right config' -> config' <$ warningM [] "Parsed state file, resuming"
-              Left _ -> config <$ warningM [] "State file is corrupt, reverting to config"
-          else config <$ warningM [] "No state file exists yet, starting with config"
-      eloop $ controllerThread =<< newMVar config'
-      forever $ sleepSeconds 1
+      if checkOnly options
+        then print config
+        else do
+          debugM "brockman" (show config)
+          stateFile <- statePath config
+          stateFileExists <- doesFileExist stateFile
+          config' <-
+            if stateFileExists
+              then do
+                configJSON' <- LBS8.readFile stateFile
+                case eitherDecode configJSON' of
+                  Right config' -> config' <$ warningM [] "Parsed state file, resuming"
+                  Left _ -> config <$ warningM [] "State file is corrupt, reverting to config"
+              else config <$ warningM [] "No state file exists yet, starting with config"
+          eloop $ controllerThread =<< newMVar config'
+          forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err
