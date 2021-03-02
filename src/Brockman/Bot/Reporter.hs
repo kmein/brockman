@@ -99,6 +99,7 @@ getFeed url =
                 HttpExceptionRequest _ (StatusCodeException response _) ->
                   T.unwords [T.pack $ show $ response ^. responseStatus . statusCode, decodeUtf8 $ response ^. responseStatus . statusMessage]
                 HttpExceptionRequest _ (ConnectionFailure _) -> "Connection failure"
+                HttpExceptionRequest _ exceptionContent -> T.pack $ show exceptionContent
                 _ -> T.pack $ show exception
        in return (Nothing, Left message)
     Right response -> do
