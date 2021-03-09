@@ -1,43 +1,32 @@
 {
   "channel": "#news",
+  "useTls": true,
+  "shortener": "http://go.r",
+  "pastebin": "http://p.r",
+  "defaultDelay": 3600,
+  "maxStartDelay": 500,
+  "notifyErrors": true,
+  "statePath": "/var/lib/brockman-state.json",
   "irc": {
-    "host": "localhost"
+    "host": "localhost",
+    "port": 6667
   },
   "controller": {
-    "nick": "brockman"
+    "nick": "brockman",
+    "extraChannels": [
+      "#chan"
+    ]
   },
   "bots": {
-    "achan": {
-      "feed": "http://boards.4channel.org/a/index.rss",
-      "delay": 60
-    },
     "bchan": {
       "feed": "http://boards.4channel.org/b/index.rss",
-      "delay": 60
+      "delay": 60,
+      "extraChannels": [
+        "#chan"
+      ]
     },
-    "cchan": {
-      "feed": "http://boards.4channel.org/c/index.rss",
-      "delay": 60
-    },
-    "wchan": {
-      "feed": "http://boards.4channel.org/w/index.rss",
-      "delay": 60
-    },
-    "nchan": {
-      "feed": "http://boards.4channel.org/n/index.rss",
-      "delay": 60
-    },
-    "litchan": {
-      "feed": "http://boards.4channel.org/lit/index.rss",
-      "delay": 60
-    },
-    "xchan": {
-      "feed": "http://boards.4channel.org/x/index.rss",
-      "delay": 60
-    },
-    "fitchan": {
-      "feed": "http://boards.4channel.org/fit/index.rss",
-      "delay": 60
+    "nypost": {
+      "feed": "https://nypost.com/feed/"
     }
   }
 }
