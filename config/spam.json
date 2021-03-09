@@ -1,4 +1,5 @@
 {
+  "channel": "#brockman",
   "irc": {
     "host": "irc.r",
     "port": 6667
