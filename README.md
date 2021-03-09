@@ -41,7 +41,7 @@ For a fully fledged config, look at [the example](./config/example.json).
 - `irc.host` specifies the IRC server to connect to.
 - `irc.port` (optional, default `6667`) specifies the port of that IRC server.
 - `controller.nick` when set, enables the controller-bot feature: A bot with the specified nick will join the channel specified in `channel` (alongside the channels specified in `controller.extraChannels`). For more information on how to interact with that bot, see [below](#controller).
-- `controller.extraChannels` (optional, default `[]`): see above.host
+- `controller.extraChannels` (optional, default `[]`): see above.
 - `bots.NAME.feed` initializes a bot named `NAME` with a feed. That bot will automatically join the channel specified in `channel` and post updates there.
 - `bots.NAME.delay` (optional) overrides the interval with which the bot checks its feed. This is figured out intelligently if you don't specify a value.
 - `bots.NAME.extraChannels` (optional, default `[]`) specifies additional channels, to which the bot posts its messages.
