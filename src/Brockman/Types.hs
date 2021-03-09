@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -12,14 +13,18 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BL
-import Data.CaseInsensitive
+import Data.CaseInsensitive (CI, foldedCase, mk)
 import Data.Char (isLower, toLower)
+import Data.Data (Data, constrFields, toConstr)
+import Data.HashMap.Strict (keys)
+import Data.List (intercalate)
 import Data.Map (Map, lookup)
 import Data.Maybe (fromMaybe)
-import Data.Text (Text)
+import qualified Data.Set as Set
+import Data.Text (Text, unpack)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Typeable (Typeable)
-import GHC.Generics (Generic)
+import GHC.Generics (Generic, Rep)
 import qualified Network.IRC.Conduit as IRC
 import System.Directory (getHomeDirectory)
 import System.FilePath ((</>))
@@ -30,7 +35,7 @@ class Encode a where encode :: a -> ByteString
 
 type URL = Text
 
-newtype Nick = Nick {unNick :: IRC.NickName (CI Text)} deriving (Eq, Ord)
+newtype Nick = Nick {unNick :: IRC.NickName (CI Text)} deriving (Data, Eq, Ord)
 
 instance Show Nick where show = show . unNick
 
@@ -46,7 +51,7 @@ instance Decode Nick where decode = Nick . mk . decodeUtf8
 
 instance Encode Nick where encode = encodeUtf8 . foldedCase . unNick
 
-newtype Channel = Channel {unChannel :: IRC.ChannelName (CI Text)} deriving (Eq, Ord)
+newtype Channel = Channel {unChannel :: IRC.ChannelName (CI Text)} deriving (Data, Eq, Ord)
 
 instance Show Channel where show = show . unChannel
 
@@ -92,26 +97,26 @@ data BrockmanConfig = BrockmanConfig
     configMaxStartDelay :: Maybe Integer,
     configNotifyErrors :: Maybe Bool
   }
-  deriving (Generic, Show, Typeable)
+  deriving (Data, Generic, Show, Typeable)
 
 data ControllerConfig = ControllerConfig
   { controllerNick :: Nick,
     controllerExtraChannels :: Maybe [Channel]
   }
-  deriving (Generic, Show, Typeable)
+  deriving (Data, Generic, Show, Typeable)
 
 data IrcConfig = IrcConfig
   { ircHost :: URL,
     ircPort :: Maybe Int
   }
-  deriving (Generic, Show, Typeable)
+  deriving (Data, Generic, Show, Typeable)
 
 data BotConfig = BotConfig
   { botFeed :: URL,
     botExtraChannels :: Maybe [Channel],
     botDelay :: Maybe Integer
   }
-  deriving (Generic, Show, Typeable)
+  deriving (Data, Generic, Show, Typeable)
 
 statePath :: BrockmanConfig -> IO FilePath
 statePath = maybe defaultStatePath pure . configStatePath
@@ -139,17 +144,32 @@ myOptions =
         [] -> []
         (x : xs) -> toLower x : xs
 
+parseStrictJSON :: (Data a, Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
+parseStrictJSON jsonValue = checkExtraneousKeys myOptions jsonValue =<< genericParseJSON myOptions jsonValue
+  where
+    checkExtraneousKeys :: (Data a, MonadFail m) => Options -> Value -> a -> m a
+    checkExtraneousKeys options value parsed =
+      case value of
+        Object o ->
+          let objectKeys = Set.fromList $ map unpack $ keys o
+              recordFields = Set.fromList $ fmap (fieldLabelModifier options) $ constrFields $ toConstr parsed
+              difference = Set.difference objectKeys recordFields
+           in if Set.null difference
+                then return parsed
+                else fail $ "extraneous keys in input: " ++ intercalate ", " (Set.toList difference)
+        _ -> fail $ "expected JSON object, got: " ++ show value
+
 instance FromJSON BrockmanConfig where
-  parseJSON = genericParseJSON myOptions
+  parseJSON = parseStrictJSON
 
 instance FromJSON BotConfig where
-  parseJSON = genericParseJSON myOptions
+  parseJSON = parseStrictJSON
 
 instance FromJSON IrcConfig where
-  parseJSON = genericParseJSON myOptions
+  parseJSON = parseStrictJSON
 
 instance FromJSON ControllerConfig where
-  parseJSON = genericParseJSON myOptions
+  parseJSON = parseStrictJSON
 
 instance ToJSON BrockmanConfig where
   toJSON = genericToJSON myOptions
