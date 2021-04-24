@@ -30,6 +30,7 @@ import Network.Socket (HostName)
 import Network.Wreq (FormParam ((:=)), defaults, getWith, header, postWith, responseBody, responseStatus, statusCode, statusMessage)
 import System.Log.Logger
 import System.Random (randomRIO)
+import System.Timeout (timeout)
 import Text.Feed.Import (parseFeedSource)
 
 data ReporterMessage
@@ -90,8 +91,10 @@ reporterThread configMVar nick = do
 
 getFeed :: URL -> IO (Maybe Integer, Either T.Text [FeedItem])
 getFeed url =
-  E.try (getWith options (T.unpack url)) >>= \case
-    Left exception ->
+  timeout (100 * second) (E.try (getWith options (T.unpack url))) >>= \case
+    Nothing ->
+      return (Nothing, Left "Timeout")
+    Just (Left exception) ->
       let mircRed text = "\ETX4,99" <> text <> "\ETX" -- ref https://www.mirc.com/colors.html
           message = mircRed $
             T.unwords $
@@ -102,7 +105,7 @@ getFeed url =
                 HttpExceptionRequest _ exceptionContent -> T.pack $ show exceptionContent
                 _ -> T.pack $ show exception
        in return (Nothing, Left message)
-    Right response -> do
+    Just (Right response) -> do
       now <- liftIO getCurrentTime
       let feed = parseFeedSource $ response ^. responseBody
           delta = feedEntryDelta now =<< feed
@@ -110,6 +113,7 @@ getFeed url =
       return (delta, Right feedItems)
   where
     options = defaults & header "Accept" .~ ["application/atom+xml", "application/rss+xml", "*/*"]
+    second = 10 ^ (6 :: Int)
 
 feedThread :: Nick -> MVar BrockmanConfig -> Bool -> Maybe LRU -> Chan ReporterMessage -> IO ()
 feedThread nick configMVar isFirstTime lru chan =
