@@ -37,6 +37,7 @@ data ControllerCommand
   | Subscribe Channel {- subscriber -} Nick {- bot -}
   | Unsubscribe Channel {- subscriber -} Nick {- bot -}
   | Dump Channel
+  | MOTD
   deriving (Show)
 
 controllerThread :: MVar BrockmanConfig -> IO ()
@@ -77,6 +78,9 @@ controllerThread configMVar = do
                       writeChan chan $ Tick nick $ readMay $ T.unpack tickString
                     Just _ -> writeChan chan $ Help $ decode channel
                     _ -> pure ()
+                -- 376 is RPL_ENDOFMOTD
+                Just (Right (IRC.Event _ _ (IRC.Numeric 376 _))) ->
+                  liftIO $ writeChan chan MOTD
                 _ -> pure ()
           speak chan = do
             handshake controllerNick initialControllerChannels
@@ -162,4 +166,7 @@ controllerThread configMVar = do
                                 case M.keys $ M.filter (\BotConfig {botExtraChannels} -> decode (encode nick) `elem` fromMaybe [] botExtraChannels) configBots of
                                   [] -> T.pack (show nick) <> " is neither bot nor subscriber"
                                   subscriptions -> T.pack (show nick) <> " has subscribed to " <> T.pack (show subscriptions)
+                    MOTD -> do
+                      notice controllerNick ("handshake, joining " <> show initialControllerChannels)
+                      mapM_ (yield . IRC.Join . encode) initialControllerChannels
        in withIrcConnection initialConfig listen speak
