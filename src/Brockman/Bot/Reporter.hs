@@ -39,6 +39,7 @@ data ReporterMessage
   | Kicked Channel
   | NewFeedItem FeedItem
   | Exception T.Text
+  | MOTD
   deriving (Show)
 
 -- return the current config or kill thread if the key is not present
@@ -77,6 +78,9 @@ reporterThread configMVar nick = do
               liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ insert channel
               notice nick $ "invited to " <> show channel
               yield $ IRC.Join $ encode channel
+            MOTD -> do
+              notice nick ("handshake, joining " <> show channels)
+              mapM_ (yield . IRC.Join . encode) channels
   where
     listen chan =
       forever $
@@ -87,6 +91,9 @@ reporterThread configMVar nick = do
           Just (Right (IRC.Event _ _ (IRC.Kick channel nick' _)))
             | nick == decode nick' ->
               liftIO $ writeChan chan $ Kicked $ decode channel
+          -- 376 is RPL_ENDOFMOTD
+          Just (Right (IRC.Event _ _ (IRC.Numeric 376 _))) ->
+            liftIO $ writeChan chan MOTD
           _ -> pure ()
 
 getFeed :: URL -> IO (Maybe Integer, Either T.Text [FeedItem])
