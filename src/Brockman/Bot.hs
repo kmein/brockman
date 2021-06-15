@@ -13,16 +13,22 @@ import Data.Maybe
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
 import qualified Network.IRC.Conduit as IRC
+import System.Log.Logger
 
 withIrcConnection :: BrockmanConfig -> (Chan a -> ConduitM (Either ByteString IRC.IrcEvent) Void IO ()) -> (Chan a -> ConduitM () IRC.IrcMessage IO ()) -> IO ()
 withIrcConnection BrockmanConfig {configIrc, configUseTls} listen speak = do
+  noticeM "" $ "Connecting to " <> T.unpack host <> ":" <> show port <> ", TLS " <> show tls
   chan <- newChan
-  (if configUseTls == Just True then IRC.ircTLSClient else IRC.ircClient)
-    (fromMaybe 6667 $ ircPort configIrc)
-    (encodeUtf8 $ ircHost configIrc)
+  (if tls then IRC.ircTLSClient else IRC.ircClient)
+    port
+    (encodeUtf8 host)
     (pure ())
     (listen chan)
     (speak chan)
+  where
+    port = fromMaybe 6667 $ ircPort configIrc
+    host = ircHost configIrc
+    tls = configUseTls == Just True
 
 handshake :: Nick -> [Channel] -> ConduitM () IRC.IrcMessage IO ()
 handshake nick channels = do
