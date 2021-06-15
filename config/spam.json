@@ -2,10 +2,10 @@
   "channel": "#brockman",
   "irc": {
     "host": "irc.r",
-    "port": 6667
+    "port": 6667,
+    "tls": false
   },
   "shortener": "http://go",
-  "useTls": false,
   "bots": {
     "aje": {
       "feed": "http://www.aljazeera.com/Services/Rss/?PostingId=2007731105943979989",

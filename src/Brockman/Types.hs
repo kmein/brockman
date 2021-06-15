@@ -87,7 +87,6 @@ botChannels nick config = (configChannel config :) $ fromMaybe [] $ botExtraChan
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Nick BotConfig,
     configChannel :: Channel,
-    configUseTls :: Maybe Bool,
     configIrc :: IrcConfig,
     configShortener :: Maybe URL,
     configController :: Maybe ControllerConfig,
@@ -107,7 +106,8 @@ data ControllerConfig = ControllerConfig
 
 data IrcConfig = IrcConfig
   { ircHost :: URL,
-    ircPort :: Maybe Int
+    ircPort :: Maybe Int,
+    ircTls :: Maybe Bool
   }
   deriving (Data, Generic, Show, Typeable)
 

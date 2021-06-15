@@ -31,7 +31,6 @@ In case you don't want to (or cannot) use the provided NixOS module, you can alw
 For a fully fledged config, look at [the example](./config/example.json).
 
 - `channel` specifies the channel all bots should join and post to.
-- `useTls` (optional, default `false`) specifies whether the IRC connection should be made using TLS.
 - `shortener` (optional) specifies an endpoint that returns shortened URLs when they are POSTed to it.
 - `pastebin` (optional) specifies an endpoint that returns a link when you POST content to it.
 - `defaultDelay` (optional) specifies the amount of seconds to wait before fetching each feed again. This is only used when `bot.NAME.delay` isn't set for a specific feed and when Brockman cannot figure out an adequate interval by itself.
@@ -40,6 +39,7 @@ For a fully fledged config, look at [the example](./config/example.json).
 - `statePath` (optional, default `$HOME/brockman.json`) specifies the path of Brockman's state file.
 - `irc.host` specifies the IRC server to connect to.
 - `irc.port` (optional, default `6667`) specifies the port of that IRC server.
+- `irc.tls` (optional, default `false`) specifies whether the IRC connection should be made using TLS.
 - `controller.nick` when set, enables the controller-bot feature: A bot with the specified nick will join the channel specified in `channel` (alongside the channels specified in `controller.extraChannels`). For more information on how to interact with that bot, see [below](#controller).
 - `controller.extraChannels` (optional, default `[]`): see above.
 - `bots.NAME.feed` initializes a bot named `NAME` with a feed. That bot will automatically join the channel specified in `channel` and post updates there.

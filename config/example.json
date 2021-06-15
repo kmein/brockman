@@ -1,6 +1,5 @@
 {
   "channel": "#news",
-  "useTls": true,
   "shortener": "http://go.r",
   "pastebin": "http://p.r",
   "defaultDelay": 3600,
@@ -9,7 +8,8 @@
   "statePath": "/var/lib/brockman-state.json",
   "irc": {
     "host": "localhost",
-    "port": 6667
+    "port": 6667,
+    "tls": true
   },
   "controller": {
     "nick": "brockman",

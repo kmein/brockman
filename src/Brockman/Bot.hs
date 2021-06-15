@@ -16,7 +16,7 @@ import qualified Network.IRC.Conduit as IRC
 import System.Log.Logger
 
 withIrcConnection :: BrockmanConfig -> (Chan a -> ConduitM (Either ByteString IRC.IrcEvent) Void IO ()) -> (Chan a -> ConduitM () IRC.IrcMessage IO ()) -> IO ()
-withIrcConnection BrockmanConfig {configIrc, configUseTls} listen speak = do
+withIrcConnection BrockmanConfig {configIrc} listen speak = do
   noticeM "" $ "Connecting to " <> T.unpack host <> ":" <> show port <> ", TLS " <> show tls
   chan <- newChan
   (if tls then IRC.ircTLSClient else IRC.ircClient)
@@ -28,7 +28,7 @@ withIrcConnection BrockmanConfig {configIrc, configUseTls} listen speak = do
   where
     port = fromMaybe 6667 $ ircPort configIrc
     host = ircHost configIrc
-    tls = configUseTls == Just True
+    tls = ircTls configIrc == Just True
 
 handshake :: Nick -> [Channel] -> ConduitM () IRC.IrcMessage IO ()
 handshake nick channels = do
