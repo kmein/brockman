@@ -57,7 +57,7 @@ The controller bot can be used to add (`CONTROLLERNAME: add BOTNAME FEEDURL`), m
 
 It can also give information about its current configuration, i. e. which bot watches which feed and how often (`CONTROLLERNAME: info BOTNAME`), which user is subscribed to which bot (`CONTROLLERNAME: info NICK`) etc.
 
-If a `pastebin` is set, `CONTROLLERNAME: dump` will publish the current state online, making it easy for you to fork a running brockman instance.
+If a `pastebin` is set, `CONTROLLERNAME: export` will publish the current state online as OPML, making it easy for you to subscribe to your feeds using another reader. Going the other way around, i. e. importing your feeds from another reader's OPML export, is done by `CONTROLLERNAME: import URL` with the `URL` being an endpoint that serves your OPML via HTTP GET (for example a pastebin service).
 
 Like the reporter bots, the controller bot can be `/invite`d and `/kick`ed and will adjust its `extraChannels` value accordingly.
 

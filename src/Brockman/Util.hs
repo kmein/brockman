@@ -1,21 +1,23 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Brockman.Util where
 
-import Brockman.Types (Encode (encode), Nick)
+import Brockman.OPML
+import Brockman.Types (BotConfig (botFeed), BrockmanConfig (..), Encode (encode), Nick)
 import Control.Concurrent (killThread, myThreadId, threadDelay)
 import Control.Exception (SomeException, handle)
 import Control.Lens
 import Control.Monad.IO.Class (MonadIO (..), liftIO)
-import Data.Aeson (ToJSON (toJSON))
-import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 (all, uncons)
+import Data.ByteString.Char8 (all, pack, uncons)
 import Data.ByteString.Lazy (toStrict)
 import Data.Char (isAsciiLower, isAsciiUpper)
 import Data.List (delete, insert)
+import Data.Map (toList)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text, unpack)
-import qualified Data.Text as T (words)
+import qualified Data.Text as T (cons, dropWhile, filter, stripPrefix, uncons, words)
 import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Network.Wreq (post, responseBody)
 import System.Log.Logger
@@ -85,7 +87,21 @@ isValidIrcNick nick =
     isNumber c = c `elem` ("0123456789" :: String)
     isSpecial c = c `elem` ("-[]\\`^{}_|" :: String) -- '_' and '|' are not in the RFC, but they work
 
-pasteJson :: ToJSON a => Text -> a -> IO Text
-pasteJson endpoint value = do
-  response <- post (Data.Text.unpack endpoint) . encodePretty $ toJSON value
+sanitizeNick :: Text -> Text
+sanitizeNick nick =
+  case T.uncons $ removeProtocol nick of
+    Just (first, rest)
+      | not (isLetter first) -> sanitizeNick rest
+      | otherwise -> T.cons first $ T.filter (\c -> isLetter c || isNumber c || isSpecial c) rest
+    Nothing -> "-"
+  where
+    isLetter c = isAsciiLower c || isAsciiUpper c
+    isNumber c = c `elem` ("0123456789" :: String)
+    isSpecial c = c `elem` ("-[]\\`^{}_|" :: String) -- '_' and '|' are not in the RFC, but they work
+    removeProtocol x = fromMaybe x $ T.stripPrefix "//" $ T.dropWhile (/= ':') x
+
+pasteOpml :: Text -> BrockmanConfig -> IO Text
+pasteOpml endpoint config = do
+  let opml = feedsToOPML $ map (\(nick, botConfig) -> (botFeed botConfig, nick)) $ toList $ configBots config
+  response <- post (Data.Text.unpack endpoint) $ pack $ serializeOPML opml
   return $ decodeUtf8 $ Data.ByteString.Lazy.toStrict $ response ^. responseBody

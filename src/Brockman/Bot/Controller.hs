@@ -7,6 +7,7 @@ module Brockman.Bot.Controller where
 
 import Brockman.Bot
 import Brockman.Bot.Reporter (reporterThread)
+import Brockman.OPML (opmlToFeeds, parseOPMLString)
 import Brockman.Types
 import Brockman.Util
 import Control.Concurrent (forkIO)
@@ -17,18 +18,21 @@ import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy.Char8 as B8
+import Data.CaseInsensitive (mk)
 import Data.Conduit
 import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Network.IRC.Conduit as IRC
+import Network.Wreq (get, responseBody)
 import Safe (readMay)
 
 data ControllerCommand
   = Info Channel Nick
   | Pinged (IRC.ServerName ByteString)
   | SetUrl Nick URL
-  | Add Nick URL (Maybe Channel)
+  | Add (Maybe Nick) URL (Maybe Channel)
   | Remove Nick
   | Tick Nick (Maybe Integer)
   | Invite Channel
@@ -36,7 +40,8 @@ data ControllerCommand
   | Help Channel
   | Subscribe Channel {- subscriber -} Nick {- bot -}
   | Unsubscribe Channel {- subscriber -} Nick {- bot -}
-  | Dump Channel
+  | Export Channel
+  | Import Channel URL
   | MOTD
   deriving (Show)
 
@@ -60,18 +65,25 @@ controllerThread configMVar = do
                     ["unsubscribe", decode -> nick] -> writeChan chan $ Unsubscribe (decode user) nick
                     ["help"] -> writeChan chan $ Help $ decode user
                     ["info", decode -> nick] -> writeChan chan $ Info (decode user) nick
-                    ["dump"] -> writeChan chan $ Dump $ decode user
+                    ["export"] -> writeChan chan $ Export $ decode user
+                    ["import", decodeUtf8 -> url] -> writeChan chan $ Import (decode user) url
                     _ -> pure ()
                 Just (Right (IRC.Event _ (IRC.Channel channel _) (IRC.Privmsg _ (Right message)))) ->
                   liftIO $ case bsWords <$> B.stripPrefix (encode controllerNick <> ":") message of
-                    Just ["dump"] -> writeChan chan $ Dump $ decode channel
+                    Just ["export"] -> writeChan chan $ Export $ decode channel
+                    Just ["import", decodeUtf8 -> url] -> writeChan chan $ Import (decode channel) url
                     Just ["help"] -> writeChan chan $ Help $ decode channel
                     Just ["info", decode -> nick] -> writeChan chan $ Info (decode channel) nick
                     Just ["set-url", decode -> nick, decodeUtf8 -> url] -> writeChan chan $ SetUrl nick url
-                    Just ["add", decode -> nick, decodeUtf8 -> url]
+                    Just ["add", decodeUtf8 -> url]
+                      | "http" `T.isPrefixOf` url ->
+                        writeChan chan $
+                          Add Nothing url $
+                            if decode channel == configChannel initialConfig then Nothing else Just $ decode channel
+                    Just ["add", decodeUtf8 -> url, decode -> nick]
                       | "http" `T.isPrefixOf` url && isValidIrcNick nick ->
                         writeChan chan $
-                          Add nick url $
+                          Add (Just nick) url $
                             if decode channel == configChannel initialConfig then Nothing else Just $ decode channel
                     Just ["remove", decode -> nick] -> writeChan chan $ Remove nick
                     Just ["tick", decode -> nick, decodeUtf8 -> tickString] ->
@@ -100,9 +112,10 @@ controllerThread configMVar = do
                           "info NICK — display a bot's settings",
                           "set-url NICK FEED_URL — change a bot's feed url",
                           "tick NICK SECONDS — change a bot's tick speed",
-                          "add NICK FEED_URL — add a new bot to all channels I am in",
+                          "add FEED_URL [NICK] — add a new bot to all channels I am in",
                           "remove NICK — tell a bot to commit suicice",
-                          "dump — upload the current config/state somewhere you can see it",
+                          "export — upload the current config as OPML",
+                          "import URL — import an OPML archive from a URL",
                           "/msg " <> decodeUtf8 (encode controllerNick) <> " subscribe NICK — subscribe to private messages from a bot",
                           "/msg " <> decodeUtf8 (encode controllerNick) <> " unsubscribe NICK — unsubscribe to private messages from a bot",
                           "/invite NICK — invite a bot from your channel",
@@ -116,12 +129,7 @@ controllerThread configMVar = do
                       channelsForNick <- botChannels nick <$> liftIO (readMVar configMVar)
                       broadcastNotice channelsForNick $ T.pack (show nick) <> " @ " <> T.pack (maybe "auto" ((<> " seconds") . show) tick)
                     Add nick url extraChannel ->
-                      case M.lookup nick configBots of
-                        Just BotConfig {botFeed} -> broadcast [fromMaybe configChannel extraChannel] [T.pack (show nick) <> " is already serving " <> botFeed]
-                        Nothing -> do
-                          liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (: []) <$> extraChannel}
-                          _ <- liftIO $ forkIO $ eloop $ reporterThread configMVar nick
-                          pure ()
+                      addReporter configMVar (fromMaybe (Nick $ mk $ sanitizeNick url) nick) url extraChannel
                     Remove nick -> do
                       liftIO $ update configMVar $ configBotsL . at nick .~ Nothing
                       notice nick "remove"
@@ -150,10 +158,23 @@ controllerThread configMVar = do
                       liftIO $ update configMVar $ configBotsL . at nick . mapped . botExtraChannelsL %~ delete user
                       notice nick $ show user <> " has unsubscribed"
                       broadcast [user] ["unsubscribed from " <> T.pack (show nick)]
-                    Dump channel ->
+                    Export channel ->
                       broadcast [channel] . (: []) =<< case configPastebin config of
-                        Just endpoint -> liftIO $ pasteJson endpoint config
+                        Just endpoint -> liftIO $ pasteOpml endpoint config
                         Nothing -> pure "No pastebin set"
+                    Import channel opmlUrl -> do
+                      notice controllerNick $ "importing OPML from " <> show opmlUrl
+                      response <- liftIO $ get (T.unpack opmlUrl)
+                      let responseString = B8.unpack $ response ^. responseBody
+                      case opmlToFeeds <$> parseOPMLString responseString of
+                        Just feeds -> do
+                          notice controllerNick $ "found " <> show (length feeds) <> " feeds in OPML"
+                          forM_ feeds $ \(url, title) -> do
+                            let nick = Nick $ mk $ sanitizeNick $ fromMaybe url title
+                            addReporter configMVar nick url (Just channel)
+                        Nothing -> do
+                          notice controllerNick "failed to parse OPML"
+                          broadcast [channel] ["URL didn't contain valid OPML"]
                     Info channel nick -> do
                       broadcast [channel] $
                         pure $
@@ -170,3 +191,18 @@ controllerThread configMVar = do
                       notice controllerNick ("handshake, joining " <> show initialControllerChannels)
                       mapM_ (yield . IRC.Join . encode) initialControllerChannels
        in withIrcConnection initialConfig listen speak
+
+addReporter :: MVar BrockmanConfig -> Nick -> URL -> Maybe Channel -> ConduitT i (IRC.Message ByteString) IO ()
+addReporter configMVar nick url extraChannel = do
+  notice nick $ "trying to add feed " <> show url
+  c <- liftIO $ readMVar configMVar
+  case M.lookup nick $ configBots c of
+    Just BotConfig {botFeed} -> do
+      notice nick $ "nick already serves " <> show botFeed
+      broadcast [fromMaybe (configChannel c) extraChannel] [T.pack (show nick) <> " is already serving " <> botFeed]
+    Nothing -> do
+      liftIO $ update configMVar $ configBotsL . at nick ?~ BotConfig {botFeed = url, botDelay = Nothing, botExtraChannels = (: []) <$> extraChannel}
+      notice nick $ "added to config with feed " <> show url
+      _ <- liftIO $ forkIO $ eloop $ reporterThread configMVar nick
+      notice nick "started reporter"
+      pure ()

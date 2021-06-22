@@ -1,5 +1,5 @@
 name: brockman
-version: 4.0.0
+version: 5.0.0
 license: MIT
 author: lassulus <lassulus@lassul.us>, kmein <kmein@posteo.de>
 maintainer: kmein <kmein@posteo.de>
@@ -9,7 +9,7 @@ cabal-version: >=1.10
 executable brockman
   hs-source-dirs: src
   main-is: Main.hs
-  other-modules: Brockman.Bot, Brockman.Bot.Controller, Brockman.Bot.Reporter, Brockman.Feed, Brockman.Types, Brockman.Util
+  other-modules: Brockman.Bot, Brockman.Bot.Controller, Brockman.Bot.Reporter, Brockman.Feed, Brockman.OPML, Brockman.Types, Brockman.Util
   build-depends:
     aeson,
     aeson-pretty,
@@ -29,6 +29,7 @@ executable brockman
     lens,
     lrucaching,
     network,
+    opml,
     optparse-applicative,
     random,
     safe,
@@ -36,6 +37,7 @@ executable brockman
     time,
     timerep,
     unordered-containers,
+    xml,
     wreq
   default-language: Haskell2010
   ghc-options: -O2 -Wall -Werror -threaded -XStrict
