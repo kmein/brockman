@@ -140,11 +140,12 @@ feedThread nick configMVar isFirstTime lru chan =
         error' nick $ "exception" <> T.unpack message
         when (fromMaybe True notifyErrors) $ writeChan chan $ Exception $ message <> " — " <> botFeed
         return lru
+      Right [] -> do
+        warning nick $ "Feed is empty: " <> T.unpack botFeed
+        writeChan chan $ Exception $ "feed is empty: " <> botFeed
+        return lru
       Right feedItems -> do
         let (lru', items) = deduplicate lru feedItems
-        when (null feedItems) $ do
-          warning nick $ "Feed is empty: " <> T.unpack botFeed
-          writeChan chan $ Exception $ "feed is empty: " <> botFeed
         unless isFirstTime $ writeList2Chan chan $ map NewFeedItem items
         return $ Just lru'
     tick <- scatterTick $ max 1 $ min 86400 $ fromMaybe fallbackDelay $ botDelay <|> newTick <|> defaultDelay
