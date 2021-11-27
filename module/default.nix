@@ -12,21 +12,38 @@ in {
   };
 
   config = mkIf cfg.enable {
-    users.extraUsers.brockman.isSystemUser = true;
-
     systemd.services.brockman = {
       description = "RSS to IRC broadcaster";
+
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" ];
+
       serviceConfig = {
+        Type = "simple";
         Restart = "always";
         ExecStart = ''
           ${cfg.package}/bin/brockman ${pkgs.writeText "brockman.json" (builtins.toJSON cfg.config)}
         '';
-        User = config.users.extraUsers.brockman.name;
-        PrivateTmp = true;
+
+        WorkingDirectory = "~";
         RuntimeDirectory = "brockman";
-        WorkingDirectory = "%t/brockman";
+
+        DynamicUser = true;
+        NoNewPrivileges = true;
+
+        ProtectProc = "invisible";
+        ProtectSystem = "strict";
+        ProtectHome = "tmpfs";
+        PrivateTmp = true;
+        PrivateDevices = true;
+        PrivateUsers = true;
+        ProtectHostname = true;
+        ProtectClock = true;
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectKernelLogs = true;
+        ProtectControlGroups = true;
+        MemoryDenyWriteExecute = true;
       };
     };
   };
