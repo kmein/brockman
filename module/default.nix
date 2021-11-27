@@ -12,7 +12,7 @@ in {
   };
 
   config = mkIf cfg.enable {
-    users.extraUsers.brockman.isNormalUser = false;
+    users.extraUsers.brockman.isSystemUser = true;
 
     systemd.services.brockman = {
       description = "RSS to IRC broadcaster";
