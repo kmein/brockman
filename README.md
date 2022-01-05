@@ -3,29 +3,6 @@ Read your favourite RSS feeds in your favourite IRC channels
 
 ## Usage
 
-### Installation
-- Nix (profile): `nix-env -i -f default.nix`
-- NixOS
-  1. import the module from [`module/default.nix`](./module/default.nix), i. e. add to the `imports` section of your NixOS configuration
-  2. add the following option to your configuration
-
-  ```nix
-  {
-    services.brockman = {
-      enable = true;
-      config = {
-        irc.host = "<IRC_HOST>";
-        bots.bchan = {
-          feed = "http://boards.4channel.org/b/index.rss";
-          channels = [ "#news" ];
-          delay = 500; # RSS checking interval
-        };
-      };
-    };
-  }
-  ```
-- Legacy: `cabal install`
-
 ### Configuration
 In case you don't want to (or cannot) use the provided NixOS module, you can always simply execute `brockman PATH/TO/CONFIG.json` to fire up an instance of Brockman with a specified config.
 For a fully fledged config, look at [the example](./config/example.json).

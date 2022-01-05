@@ -1,8 +1,6 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, package ? pkgs.callPackage ../. {}, ... }:
 with lib;
 let
-  package = pkgs.callPackage ../. {};
-
   cfg = config.services.brockman;
 in {
   options.services.brockman = {

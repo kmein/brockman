@@ -1,7 +1,5 @@
 { config, lib, pkgs, ... }:
 {
-  imports = [ ../module ];
-
   services.brockman = {
     enable = true;
     config = builtins.fromJSON (builtins.readFile ../config/example.json);
