@@ -35,6 +35,16 @@
         type = "app";
         program = toString (pkgs.writeScript "check-formatting" ''${pkgs.findutils}/bin/find src/ -type f -exec ${pkgs.ormolu}/bin/ormolu --mode check '{}' \;'');
       };
+      check-configs = {
+        type = "app";
+        program = toString (pkgs.writeScript "check-configs" ''
+          set -e
+          for config in ./config/*.json; do
+            echo === checking "$config"
+            ${self.defaultPackage.${system}}/bin/brockman --check "$config"
+          done
+        '');
+      };
     };
 
     devShell.${system} = package.env.overrideAttrs (old: old // {
