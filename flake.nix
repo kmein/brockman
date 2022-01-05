@@ -11,7 +11,7 @@
 
   outputs = { self, nixpkgs, nixos-generators }: let
     system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.x86_64-linux;
+    pkgs = nixpkgs.legacyPackages.${system};
   in {
     packages.${system} = {
       brockman = pkgs.haskellPackages.callPackage ./default.nix {};
