@@ -41,15 +41,15 @@ Like the reporter bots, the controller bot can be `/invite`d and `/kick`ed and w
 ## Development
 
 ### Development REPL
-- Nix: `nix-shell --attr env default.nix --run "cabal repl"  `
+Run `nix develop -c $SHELL` to bring the package's dependencies into scope.
+Then you can run `cabal repl` to enter a REPL with the Haskell modules in scope.
 
 ### Build
-- Nix: `nix-build`
-- Legacy: `cabal build`
+Run `nix build`.
 
 ### Test
-Running [`vm-test/start.sh`](./vm-test/start.sh) (a [Nix](https://nixos.org) installation is required) will fire up a NixOS VM running an IRC server together with a `brockman` instance with one RSS feed, which will post to the `#news` channel.
-
+Run `nix build .#vm --impure` to build a test VM which you can run using `result/bin/run-nixos-vm`.
+The test VM will be running an IRC server together with a `brockman` instance with one RSS feed, which will post to the `#news` channel.
 
 ## Eponym
 

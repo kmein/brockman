@@ -12,9 +12,10 @@
   outputs = { self, nixpkgs, nixos-generators }: let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
+    package = pkgs.haskellPackages.callPackage ./default.nix {};
   in {
     packages.${system} = {
-      brockman = pkgs.haskellPackages.callPackage ./default.nix {};
+      brockman = package;
 
       vm = nixos-generators.nixosGenerate {
         inherit pkgs;
@@ -36,9 +37,12 @@
       };
     };
 
+    devShell.${system} = package.env.overrideAttrs (old: old // {
+      buildInputs = [ pkgs.cabal-install ];
+    });
+
     nixosModule = { config, lib, pkgs, ... }: import nix/module.nix {
-      inherit config lib pkgs;
-      package = self.defaultPackage.${system};
+      inherit package config lib pkgs;
     };
   };
 }
