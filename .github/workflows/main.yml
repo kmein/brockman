@@ -14,6 +14,6 @@ jobs:
     - name: Check formatting
       run: nix run .#check-formatting
     - name: Build
-      run: nix build
+      run: nix build .#vm --impure
     - name: Validate configs
       run: set -e && for config in ./config/*.json; do echo === checking "$config"; result/bin/brockman --check "$config"; done
