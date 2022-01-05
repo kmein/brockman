@@ -9,7 +9,7 @@
   "irc": {
     "host": "localhost",
     "port": 6667,
-    "tls": false
+    "tls": true
   },
   "controller": {
     "nick": "brockman",

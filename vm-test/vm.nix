@@ -9,7 +9,7 @@
 
   systemd.services.brockman.environment.BROCKMAN_LOG_LEVEL = "DEBUG";
 
-  services.getty.autologinUser = "root";
+  services.mingetty.autologinUser = "root";
   programs.bash.promptInit = ''
     ${pkgs.tmux}/bin/tmux new-session \
       '${pkgs.epic5}/bin/epic5 -c "#news" listener localhost' \; \
