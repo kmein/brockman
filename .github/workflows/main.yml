@@ -16,4 +16,4 @@ jobs:
     - name: Validate configs
       run: nix run .#check-configs
     - name: Build
-      run: nix build .#vm --impure
+      run: nix build .#vm --impure --dry-run
