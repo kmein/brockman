@@ -52,7 +52,10 @@ broadcastNotice channels message =
 broadcast :: Monad m => [Channel] -> [T.Text] -> ConduitT i (IRC.Message ByteString) m ()
 broadcast channels messages =
   sourceList
-    [ IRC.Privmsg (encode channel) $ Right $ encodeUtf8 message
+    [ IRC.Privmsg (encode channel) $ Right $ encodeIRCMessage message
       | channel <- channels,
         message <- messages
     ]
+
+encodeIRCMessage :: T.Text -> ByteString
+encodeIRCMessage = encodeUtf8 . T.map (\c -> if c `elem` ("\0\r\n" :: [Char]) then ' ' else c)
