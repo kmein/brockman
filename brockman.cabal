@@ -27,7 +27,7 @@ executable brockman
     http-client,
     irc-conduit,
     lens,
-    lrucaching,
+    lrucache,
     network,
     optparse-applicative,
     random,

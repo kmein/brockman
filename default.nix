@@ -1,21 +1,20 @@
 { mkDerivation, aeson, aeson-pretty, base, bytestring
 , case-insensitive, conduit, containers, directory, feed, filepath
 , hashable, hslogger, html-entity, http-client, irc-conduit, lens
-, lib, lrucaching, network, optparse-applicative, random, safe
-, text, time, timerep, unordered-containers, wreq
+, lib, lrucache, network, optparse-applicative, random, safe, text
+, time, timerep, unordered-containers, wreq
 }:
 mkDerivation {
   pname = "brockman";
-  version = "4.0.2";
+  version = "4.0.3";
   src = ./.;
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
     aeson aeson-pretty base bytestring case-insensitive conduit
     containers directory feed filepath hashable hslogger html-entity
-    http-client irc-conduit lens lrucaching network
-    optparse-applicative random safe text time timerep
-    unordered-containers wreq
+    http-client irc-conduit lens lrucache network optparse-applicative
+    random safe text time timerep unordered-containers wreq
   ];
   license = lib.licenses.mit;
 }
