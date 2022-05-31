@@ -78,20 +78,12 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
       _ -> Nothing
 
 deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
-deduplicate maybeLRU items =
-  case maybeLRU of
-    Nothing ->
-      freshLru
-    Just lru ->
-      case LRU.maxSize lru of
-        Nothing ->
-          freshLru
-        Just capacity ->
-          if capacity < genericLength items
-            then freshLru
-            else insertItems lru items
+deduplicate maybeLRU items
+  | Just lru <- maybeLRU
+  , Just capacity <- LRU.maxSize lru
+  , capacity >= genericLength items = insertItems lru items
+  | otherwise = insertItems (LRU.newLRU (Just $ genericLength items * 2)) items
   where
-    freshLru = insertItems (LRU.newLRU (Just $ genericLength items * 2)) items
     key = hash . itemLink
     insertItems lru items' = foldl' step (lru, []) items'
     step (lru, items') item =
