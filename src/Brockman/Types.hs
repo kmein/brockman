@@ -16,12 +16,13 @@ import qualified Data.ByteString.Lazy as BL
 import Data.CaseInsensitive (CI, foldedCase, mk)
 import Data.Char (isLower, toLower)
 import Data.Data (Data, constrFields, toConstr)
-import Data.HashMap.Strict (keys)
+import Data.Aeson.KeyMap (keys)
+import qualified Data.Aeson.Key
 import Data.List (intercalate)
 import Data.Map (Map, lookup)
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic, Rep)
@@ -151,7 +152,8 @@ parseStrictJSON jsonValue = checkExtraneousKeys myOptions jsonValue =<< genericP
     checkExtraneousKeys options value parsed =
       case value of
         Object o ->
-          let objectKeys = Set.fromList $ map unpack $ keys o
+          let objectKeys :: Set.Set String
+              objectKeys = Set.fromList $ map Data.Aeson.Key.toString $ keys o
               recordFields = Set.fromList $ fmap (fieldLabelModifier options) $ constrFields $ toConstr parsed
               difference = Set.difference objectKeys recordFields
            in if Set.null difference
