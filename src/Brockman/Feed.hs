@@ -8,8 +8,7 @@ import Control.Applicative (Alternative (..))
 import Data.Fixed
 import Data.Hashable (hash)
 import Data.List
-import qualified Data.LruCache as LRU
-import Data.LruCache.Internal (LruCache (lruCapacity))
+import qualified Data.Cache.LRU as LRU
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, intercalate, lines, pack, strip, unwords)
 import Data.Time.Clock
@@ -25,7 +24,7 @@ import Text.RSS.Syntax (RSSItem (rssItemPubDate))
 import qualified Text.RSS.Syntax as RSS
 import qualified Text.RSS1.Syntax as RSS1
 
-type LRU = LRU.LruCache Int ()
+type LRU = LRU.LRU Int ()
 
 data FeedItem = FeedItem
   { itemTitle :: Text,
@@ -79,19 +78,15 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
       _ -> Nothing
 
 deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
-deduplicate maybeLRU items =
-  case maybeLRU of
-    Nothing ->
-      freshLru
-    Just lru ->
-      if lruCapacity lru < genericLength items
-        then freshLru
-        else insertItems lru items
+deduplicate maybeLRU items
+  | Just lru <- maybeLRU
+  , Just capacity <- LRU.maxSize lru
+  , capacity >= genericLength items = insertItems lru items
+  | otherwise = insertItems (LRU.newLRU (Just $ genericLength items * 2)) items
   where
-    freshLru = insertItems (LRU.empty (genericLength items * 2)) items
     key = hash . itemLink
     insertItems lru items' = foldl' step (lru, []) items'
     step (lru, items') item =
       case LRU.lookup (key item) lru of
-        Nothing -> (LRU.insert (key item) () lru, item : items')
-        Just ((), newLru) -> (newLru, items')
+        (newLRU, Nothing) -> (LRU.insert (key item) () newLRU, item : items')
+        (newLRU, Just ()) -> (newLRU, items')
