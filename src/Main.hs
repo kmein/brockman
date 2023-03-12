@@ -7,6 +7,7 @@
 import Brockman.Bot.Controller (controllerThread)
 import Brockman.Types
 import Brockman.Util (eloop, sleepSeconds)
+import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import Control.Monad (forever)
 import Data.Aeson
@@ -57,6 +58,10 @@ main = do
                   Right config' -> config' <$ warningM [] "Parsed state file, resuming"
                   Left _ -> config <$ warningM [] "State file is corrupt, reverting to config"
               else config <$ warningM [] "No state file exists yet, starting with config"
-          eloop $ controllerThread =<< newMVar config'
+          configMVar <- newMVar config'
+          forkIO $ forever $ do
+            encodeFile stateFile =<< readMVar configMVar
+            sleepSeconds $ fromMaybe 300 $ configStateSaveInterval config'
+          eloop $ controllerThread configMVar
           forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err >> exitFailure

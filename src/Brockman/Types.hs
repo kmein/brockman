@@ -95,6 +95,7 @@ data BrockmanConfig = BrockmanConfig
     configPastebin :: Maybe URL,
     configDefaultDelay :: Maybe Integer,
     configMaxStartDelay :: Maybe Integer,
+    configStateSaveInterval :: Maybe Integer,
     configNotifyErrors :: Maybe Bool
   }
   deriving (Data, Generic, Show, Typeable)
