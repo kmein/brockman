@@ -57,6 +57,8 @@ main = do
                   Right config' -> config' <$ warningM [] "Parsed state file, resuming"
                   Left _ -> config <$ warningM [] "State file is corrupt, reverting to config"
               else config <$ warningM [] "No state file exists yet, starting with config"
-          eloop $ controllerThread =<< newMVar config'
+          let mergedConfig = mergeBrockmanConfig config config'
+          warningM [] $ "Merged state into config file. Result:" <> show mergedConfig
+          eloop $ controllerThread =<< newMVar mergedConfig
           forever $ sleepSeconds 1
     Left err -> errorM "brockman.main" err >> exitFailure
