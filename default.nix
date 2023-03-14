@@ -6,7 +6,7 @@
 }:
 mkDerivation {
   pname = "brockman";
-  version = "4.0.3";
+  version = "5.0.0";
   src = ./.;
   isLibrary = false;
   isExecutable = true;
