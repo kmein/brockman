@@ -58,7 +58,8 @@ reporterThread configMVar nick = do
       _ <- liftIO $ forkIO $ feedThread nick configMVar True Nothing chan
       forever $
         withCurrentBotConfig nick configMVar $ \_ -> do
-          channels <- botChannels nick <$> liftIO (readMVar configMVar)
+          currentConfig <- liftIO (readMVar configMVar)
+          let channels = botChannels nick currentConfig
           command <- liftIO (readChan chan)
           debug nick $ show command
           case command of
@@ -68,7 +69,9 @@ reporterThread configMVar nick = do
             NewFeedItem item -> do
               item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
               debug nick ("sending " <> show (display item'))
-              broadcast channels [display item']
+              if fromMaybe False (configNoPrivmsg config)
+                 then broadcastNotice channels $ display item'
+                 else broadcast channels [display item']
             Exception message ->
               broadcastNotice channels message
             Kicked channel -> do

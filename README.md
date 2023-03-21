@@ -13,6 +13,7 @@ For a fully fledged config, look at [the example](./config/example.json).
 - `defaultDelay` (optional) specifies the amount of seconds to wait before fetching each feed again. This is only used when `bot.NAME.delay` isn't set for a specific feed and when Brockman cannot figure out an adequate interval by itself.
 - `maxStartDelay` (optional, default `60`) is used for Brockman's startup sequence: if you have many—say, a thousand—bots and start them all at once, you won't get an even stream of news in your channels. Therefore, a bot's startup will be delayed by a random number of seconds. This field specifies the maximum.
 - `notifyErrors` (optional, default `true`) specifies whether to notify (IRC notice) of errors that happen when fetching feeds, e. g. 404 errors etc.
+- `noPrivmsg` (optional, default `false`) specifies whether to send the feed items as `NOTICE` instead of `PRIVMSG`.
 - `statePath` (optional, default `$HOME/brockman.json`) specifies the path of Brockman's state file.
 - `irc.host` specifies the IRC server to connect to.
 - `irc.port` (optional, default `6667`) specifies the port of that IRC server.
