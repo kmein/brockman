@@ -108,6 +108,7 @@ mergeBrockmanConfig a b = BrockmanConfig
   , configChannel = configChannel b
   , configController = configController a `mergeControllerConfig` configController b
   , configIrc = configIrc a `mergeIrcConfig` configIrc b
+  , configNoPrivmsg = configNoPrivmsg a <|> configNoPrivmsg b
   , configShortener = configShortener a <|> configShortener b
   , configStatePath = configStatePath a <|> configStatePath b
   , configPastebin = configPastebin a <|> configPastebin b
