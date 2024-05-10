@@ -31,6 +31,10 @@
         type = "app";
         program = toString (pkgs.writeScript "generate" "${pkgs.cabal2nix}/bin/cabal2nix . > default.nix");
       };
+      fix-formatting = {
+        type = "app";
+        program = toString (pkgs.writeScript "fix-formatting" ''${pkgs.findutils}/bin/find src/ -type f -exec ${pkgs.ormolu}/bin/ormolu --mode inplace '{}' \;'');
+      };
       check-formatting = {
         type = "app";
         program = toString (pkgs.writeScript "check-formatting" ''${pkgs.findutils}/bin/find src/ -type f -exec ${pkgs.ormolu}/bin/ormolu --mode check '{}' \;'');
