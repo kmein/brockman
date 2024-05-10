@@ -5,10 +5,10 @@
 module Brockman.Feed where
 
 import Control.Applicative (Alternative (..))
+import qualified Data.Cache.LRU as LRU
 import Data.Fixed
 import Data.Hashable (hash)
 import Data.List
-import qualified Data.Cache.LRU as LRU
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Text (Text, intercalate, lines, pack, strip, unwords)
 import Data.Time.Clock
@@ -34,16 +34,14 @@ data FeedItem = FeedItem
   deriving (Show)
 
 display :: Bool -> FeedItem -> Text
-display showEntryDate item = 
-  let
-    date = case (showEntryDate, itemDate item) of
-             (True, Just entryDate) -> [entryDate]
-             _ -> []
-  in
-  Data.Text.unwords $
-    [ strip $ itemLink item ]
-    ++ date
-    ++ [ decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item ]
+display showEntryDate item =
+  let date = case (showEntryDate, itemDate item) of
+        (True, Just entryDate) -> [entryDate]
+        _ -> []
+   in Data.Text.unwords $
+        [strip $ itemLink item]
+          ++ date
+          ++ [decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item]
 
 feedEntryUtc :: Feed.Item -> Maybe UTCTime
 feedEntryUtc item =
@@ -91,9 +89,10 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
 
 deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
 deduplicate maybeLRU items
-  | Just lru <- maybeLRU
-  , Just capacity <- LRU.maxSize lru
-  , capacity >= genericLength items = insertItems lru items
+  | Just lru <- maybeLRU,
+    Just capacity <- LRU.maxSize lru,
+    capacity >= genericLength items =
+    insertItems lru items
   | otherwise = insertItems (LRU.newLRU (Just $ genericLength items * 2)) items
   where
     key = hash . itemLink

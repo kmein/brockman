@@ -42,14 +42,14 @@ deafen nick = yield $ IRC.Mode (encode nick) False [] ["+D"] -- deafen to PRIVMS
 
 -- maybe join channels separated by comma
 
-broadcastNotice :: Monad m => [Channel] -> T.Text -> ConduitT i (IRC.Message ByteString) m ()
+broadcastNotice :: (Monad m) => [Channel] -> T.Text -> ConduitT i (IRC.Message ByteString) m ()
 broadcastNotice channels message =
   sourceList
     [ IRC.Notice (encode channel) $ Right $ encodeUtf8 message
       | channel <- channels
     ]
 
-broadcast :: Monad m => [Channel] -> [T.Text] -> ConduitT i (IRC.Message ByteString) m ()
+broadcast :: (Monad m) => [Channel] -> [T.Text] -> ConduitT i (IRC.Message ByteString) m ()
 broadcast channels messages =
   sourceList
     [ IRC.Privmsg (encode channel) $ Right $ encodeIRCMessage message

@@ -18,8 +18,8 @@ import Control.Monad
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
-import Data.Conduit
 import qualified Data.Cache.LRU as LRU
+import Data.Conduit
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
@@ -43,7 +43,7 @@ data ReporterMessage
   deriving (Show)
 
 -- return the current config or kill thread if the key is not present
-withCurrentBotConfig :: MonadIO m => Nick -> MVar BrockmanConfig -> (BotConfig -> m ()) -> m ()
+withCurrentBotConfig :: (MonadIO m) => Nick -> MVar BrockmanConfig -> (BotConfig -> m ()) -> m ()
 withCurrentBotConfig nick configMVar handler = do
   BrockmanConfig {configBots} <- liftIO $ readMVar configMVar
   maybe (liftIO suicide) handler $ M.lookup nick configBots
@@ -71,8 +71,8 @@ reporterThread configMVar nick = do
               let displayItem = display (fromMaybe False configShowEntryDate)
               debug nick ("sending " <> show (displayItem item'))
               if fromMaybe False (configNoPrivmsg config)
-                 then broadcastNotice channels $ displayItem item'
-                 else broadcast channels [displayItem item']
+                then broadcastNotice channels $ displayItem item'
+                else broadcast channels [displayItem item']
             Exception message ->
               broadcastNotice channels message
             Kicked channel -> do

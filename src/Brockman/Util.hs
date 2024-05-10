@@ -33,22 +33,22 @@ eloop x =
 sleepSeconds :: Integer -> IO ()
 sleepSeconds n = threadDelay $ fromInteger (n * (^) @Integer @Integer 10 6)
 
-optionally :: Applicative f => (a -> f ()) -> Maybe a -> f ()
+optionally :: (Applicative f) => (a -> f ()) -> Maybe a -> f ()
 optionally = maybe (pure ())
 
-notice :: MonadIO m => Nick -> String -> m ()
+notice :: (MonadIO m) => Nick -> String -> m ()
 notice nick message =
   liftIO $ noticeM "brockman" ("[" <> show nick <> "] " <> message)
 
-debug :: MonadIO m => Nick -> String -> m ()
+debug :: (MonadIO m) => Nick -> String -> m ()
 debug nick message =
   liftIO $ debugM "brockman" ("[" <> show nick <> "] " <> message)
 
-warning :: MonadIO m => Nick -> String -> m ()
+warning :: (MonadIO m) => Nick -> String -> m ()
 warning nick message =
   liftIO $ warningM "brockman" ("[" <> show nick <> "] " <> message)
 
-error' :: MonadIO m => Nick -> String -> m ()
+error' :: (MonadIO m) => Nick -> String -> m ()
 error' nick message =
   liftIO $ errorM "brockman" ("[" <> show nick <> "] " <> message)
 
@@ -58,14 +58,14 @@ suicide = killThread =<< myThreadId
 decodeUtf8 :: ByteString -> Text
 decodeUtf8 = decodeUtf8With $ \_error _ -> Just '?'
 
-insert :: Ord a => a -> Maybe [a] -> Maybe [a]
+insert :: (Ord a) => a -> Maybe [a] -> Maybe [a]
 insert value list
   | Just values <- list, value `elem` values = list
   | otherwise = case Data.List.insert value <$> list of
     Nothing -> Just [value]
     Just xs -> Just xs
 
-delete :: Ord a => a -> Maybe [a] -> Maybe [a]
+delete :: (Ord a) => a -> Maybe [a] -> Maybe [a]
 delete value list = case Data.List.delete value <$> list of
   Nothing -> Nothing
   Just [] -> Nothing
@@ -85,7 +85,7 @@ isValidIrcNick nick =
     isNumber c = c `elem` ("0123456789" :: String)
     isSpecial c = c `elem` ("-[]\\`^{}_|" :: String) -- '_' and '|' are not in the RFC, but they work
 
-pasteJson :: ToJSON a => Text -> a -> IO Text
+pasteJson :: (ToJSON a) => Text -> a -> IO Text
 pasteJson endpoint value = do
   response <- post (Data.Text.unpack endpoint) . encodePretty $ toJSON value
   return $ decodeUtf8 $ Data.ByteString.Lazy.toStrict $ response ^. responseBody

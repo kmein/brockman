@@ -11,14 +11,14 @@ import Control.Concurrent.MVar
 import Control.Lens
 import Data.Aeson hiding ((.=))
 import Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.Aeson.Key
+import Data.Aeson.KeyMap (keys)
 import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BL
 import Data.CaseInsensitive (CI, foldedCase, mk)
 import Data.Char (isLower, toLower)
 import Data.Data (Data, constrFields, toConstr)
-import Data.Aeson.KeyMap (keys)
-import qualified Data.Aeson.Key
 import Data.List (intercalate)
 import Data.Map (Map, lookup, union)
 import Data.Maybe (fromMaybe)
@@ -87,36 +87,40 @@ botChannels :: Nick -> BrockmanConfig -> [Channel]
 botChannels nick config = (configChannel config :) $ fromMaybe [] $ botExtraChannels =<< Data.Map.lookup nick (configBots config)
 
 mergeIrcConfig :: IrcConfig -> IrcConfig -> IrcConfig
-mergeIrcConfig a b = IrcConfig
-  { ircHost = ircHost b
-  , ircPort = ircPort a <|> ircPort b
-  , ircTls = ircTls a <|> ircTls b
-  }
+mergeIrcConfig a b =
+  IrcConfig
+    { ircHost = ircHost b,
+      ircPort = ircPort a <|> ircPort b,
+      ircTls = ircTls a <|> ircTls b
+    }
 
 mergeControllerConfig :: Maybe ControllerConfig -> Maybe ControllerConfig -> Maybe ControllerConfig
-mergeControllerConfig (Just a) (Just b) = Just ControllerConfig
-  { controllerNick = controllerNick b
-  , controllerExtraChannels = controllerExtraChannels a <> controllerExtraChannels b
-  }
+mergeControllerConfig (Just a) (Just b) =
+  Just
+    ControllerConfig
+      { controllerNick = controllerNick b,
+        controllerExtraChannels = controllerExtraChannels a <> controllerExtraChannels b
+      }
 mergeControllerConfig (Just a) _ = Just a
 mergeControllerConfig _ (Just b) = Just b
 mergeControllerConfig _ _ = Nothing
 
 mergeBrockmanConfig :: BrockmanConfig -> BrockmanConfig -> BrockmanConfig
-mergeBrockmanConfig a b = BrockmanConfig
-  { configBots = configBots a `union` configBots b
-  , configChannel = configChannel b
-  , configController = configController a `mergeControllerConfig` configController b
-  , configIrc = configIrc a `mergeIrcConfig` configIrc b
-  , configNoPrivmsg = configNoPrivmsg a <|> configNoPrivmsg b
-  , configShortener = configShortener a <|> configShortener b
-  , configStatePath = configStatePath a <|> configStatePath b
-  , configPastebin = configPastebin a <|> configPastebin b
-  , configDefaultDelay = configDefaultDelay a <|> configDefaultDelay b
-  , configMaxStartDelay = configMaxStartDelay a <|> configMaxStartDelay b
-  , configNotifyErrors = configNotifyErrors a <|> configNotifyErrors b
-  , configShowEntryDate = configShowEntryDate a <|> configShowEntryDate b
-  }
+mergeBrockmanConfig a b =
+  BrockmanConfig
+    { configBots = configBots a `union` configBots b,
+      configChannel = configChannel b,
+      configController = configController a `mergeControllerConfig` configController b,
+      configIrc = configIrc a `mergeIrcConfig` configIrc b,
+      configNoPrivmsg = configNoPrivmsg a <|> configNoPrivmsg b,
+      configShortener = configShortener a <|> configShortener b,
+      configStatePath = configStatePath a <|> configStatePath b,
+      configPastebin = configPastebin a <|> configPastebin b,
+      configDefaultDelay = configDefaultDelay a <|> configDefaultDelay b,
+      configMaxStartDelay = configMaxStartDelay a <|> configMaxStartDelay b,
+      configNotifyErrors = configNotifyErrors a <|> configNotifyErrors b,
+      configShowEntryDate = configShowEntryDate a <|> configShowEntryDate b
+    }
 
 data BrockmanConfig = BrockmanConfig
   { configBots :: Map Nick BotConfig,
