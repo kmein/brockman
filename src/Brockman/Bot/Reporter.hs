@@ -50,7 +50,7 @@ withCurrentBotConfig nick configMVar handler = do
 
 reporterThread :: MVar BrockmanConfig -> Nick -> IO ()
 reporterThread configMVar nick = do
-  config@BrockmanConfig {configChannel, configShortener} <- readMVar configMVar
+  config@BrockmanConfig {configChannel, configShortener, configShowEntryDate} <- readMVar configMVar
   withIrcConnection config listen $ \chan -> do
     withCurrentBotConfig nick configMVar $ \initialBotConfig -> do
       handshake nick $ configChannel : fromMaybe [] (botExtraChannels initialBotConfig)
@@ -68,10 +68,11 @@ reporterThread configMVar nick = do
               yield $ IRC.Pong serverName
             NewFeedItem item -> do
               item' <- liftIO $ maybe (pure item) (\url -> item `shortenWith` T.unpack url) configShortener
-              debug nick ("sending " <> show (display item'))
+              let displayItem = display (fromMaybe False configShowEntryDate)
+              debug nick ("sending " <> show (displayItem item'))
               if fromMaybe False (configNoPrivmsg config)
-                 then broadcastNotice channels $ display item'
-                 else broadcast channels [display item']
+                 then broadcastNotice channels $ displayItem item'
+                 else broadcast channels [displayItem item']
             Exception message ->
               broadcastNotice channels message
             Kicked channel -> do

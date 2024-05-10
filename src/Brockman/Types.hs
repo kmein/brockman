@@ -115,6 +115,7 @@ mergeBrockmanConfig a b = BrockmanConfig
   , configDefaultDelay = configDefaultDelay a <|> configDefaultDelay b
   , configMaxStartDelay = configMaxStartDelay a <|> configMaxStartDelay b
   , configNotifyErrors = configNotifyErrors a <|> configNotifyErrors b
+  , configShowEntryDate = configShowEntryDate a <|> configShowEntryDate b
   }
 
 data BrockmanConfig = BrockmanConfig
@@ -128,7 +129,8 @@ data BrockmanConfig = BrockmanConfig
     configDefaultDelay :: Maybe Integer,
     configMaxStartDelay :: Maybe Integer,
     configNotifyErrors :: Maybe Bool,
-    configNoPrivmsg :: Maybe Bool
+    configNoPrivmsg :: Maybe Bool,
+    configShowEntryDate :: Maybe Bool
   }
   deriving (Data, Generic, Show, Typeable)
 

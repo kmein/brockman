@@ -5,6 +5,7 @@
   "defaultDelay": 3600,
   "maxStartDelay": 500,
   "notifyErrors": true,
+  "showEntryDate": true,
   "statePath": "/var/lib/brockman-state.json",
   "irc": {
     "host": "localhost",

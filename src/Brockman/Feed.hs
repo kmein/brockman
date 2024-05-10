@@ -28,12 +28,22 @@ type LRU = LRU.LRU Int ()
 
 data FeedItem = FeedItem
   { itemTitle :: Text,
+    itemDate :: Maybe RSS.DateString,
     itemLink :: Text
   }
   deriving (Show)
 
-display :: FeedItem -> Text
-display item = Data.Text.unwords [strip $ itemLink item, decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item]
+display :: Bool -> FeedItem -> Text
+display showEntryDate item = 
+  let
+    date = case (showEntryDate, itemDate item) of
+             (True, Just entryDate) -> [entryDate]
+             _ -> []
+  in
+  Data.Text.unwords $
+    [ strip $ itemLink item ]
+    ++ date
+    ++ [ decode' $ Data.Text.intercalate " | " $ Data.Text.lines $ strip $ itemTitle item ]
 
 feedEntryUtc :: Feed.Item -> Maybe UTCTime
 feedEntryUtc item =
@@ -68,13 +78,15 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
       Feed.AtomItem entry ->
         let title = pack $ Atom.txtToString $ Atom.entryTitle entry
             link = Atom.linkHref <$> listToMaybe (Atom.entryLinks entry)
-         in FeedItem title <$> link
+            date = Atom.entryPublished entry
+         in FeedItem title date <$> link
       Feed.RSSItem item ->
         let title = fromMaybe "untitled" (RSS.rssItemTitle item)
             link = RSS.rssItemLink item
-         in FeedItem title <$> link
+            date = RSS.rssItemPubDate item
+         in FeedItem title date <$> link
       Feed.RSS1Item item ->
-        Just $ FeedItem (RSS1.itemTitle item) (RSS1.itemLink item)
+        Just $ FeedItem (RSS1.itemTitle item) Nothing (RSS1.itemLink item)
       _ -> Nothing
 
 deduplicate :: Maybe LRU -> [FeedItem] -> (LRU, [FeedItem])
