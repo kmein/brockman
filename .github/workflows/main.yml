@@ -12,7 +12,9 @@ jobs:
     - name: Install Nix
       uses: cachix/install-nix-action@v16
     - name: Check formatting
-      run: nix run .#check-formatting
+      run: |
+        dpkg --print-architecture
+        nix run .#check-formatting
     - name: Validate configs
       run: nix run .#check-configs
     - name: Build
