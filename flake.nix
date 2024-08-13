@@ -10,11 +10,15 @@
   };
 
   outputs = { self, nixpkgs, nixos-generators }: let
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
-    package = pkgs.haskellPackages.callPackage ./default.nix {};
+    supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
   in {
-    packages.${system} = {
+    packages = forAllSystems (system:
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      package = pkgs.haskellPackages.callPackage ./default.nix {};
+    in {
+      default = package;
       brockman = package;
 
       vm = nixos-generators.nixosGenerate {
@@ -22,11 +26,11 @@
         modules = [ self.nixosModule (import nix/vm.nix) ];
         format = "vm-nogui";
       };
-    };
+    });
 
-    defaultPackage.${system} = self.packages.${system}.brockman;
-
-    apps.${system} = {
+    apps = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
       generate = {
         type = "app";
         program = toString (pkgs.writeScript "generate" "${pkgs.cabal2nix}/bin/cabal2nix . > default.nix");
@@ -49,14 +53,18 @@
           done
         '');
       };
-    };
-
-    devShell.${system} = package.env.overrideAttrs (old: old // {
-      buildInputs = [ pkgs.cabal-install ];
     });
 
+    devShell = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+      package = pkgs.haskellPackages.callPackage ./default.nix {};
+    in package.env.overrideAttrs (old: old // {
+      buildInputs = [ pkgs.cabal-install ];
+    }));
+
     nixosModule = { config, lib, pkgs, ... }: import nix/module.nix {
-      inherit package config lib pkgs;
+      package = pkgs.haskellPackages.callPackage ./default.nix {};
+      inherit config lib pkgs;
     };
   };
 }
