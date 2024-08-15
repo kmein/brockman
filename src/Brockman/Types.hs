@@ -20,7 +20,7 @@ import Data.CaseInsensitive (CI, foldedCase, mk)
 import Data.Char (isLower, toLower)
 import Data.Data (Data, constrFields, toConstr)
 import Data.List (intercalate)
-import Data.Map (Map, lookup, union)
+import Data.Map.Strict (Map, lookup, union)
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -84,7 +84,7 @@ botExtraChannelsL :: Lens' BotConfig (Maybe [Channel])
 botExtraChannelsL = lens botExtraChannels (\bot channels -> bot {botExtraChannels = channels})
 
 botChannels :: Nick -> BrockmanConfig -> [Channel]
-botChannels nick config = (configChannel config :) $ fromMaybe [] $ botExtraChannels =<< Data.Map.lookup nick (configBots config)
+botChannels nick config = (configChannel config :) $ fromMaybe [] $ botExtraChannels =<< Data.Map.Strict.lookup nick (configBots config)
 
 mergeIrcConfig :: IrcConfig -> IrcConfig -> IrcConfig
 mergeIrcConfig a b =

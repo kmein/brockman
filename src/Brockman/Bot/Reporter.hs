@@ -20,7 +20,7 @@ import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BL (toStrict)
 import qualified Data.Cache.LRU as LRU
 import Data.Conduit
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T (Text, pack, unpack, unwords, words)
 import Data.Time.Clock (getCurrentTime)

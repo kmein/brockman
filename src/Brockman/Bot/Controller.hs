@@ -18,7 +18,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Conduit
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Network.IRC.Conduit as IRC
