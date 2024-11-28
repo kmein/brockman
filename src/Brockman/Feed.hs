@@ -79,7 +79,7 @@ feedToItems = maybe [] (mapMaybe fromItem . feedItems)
             date = Atom.entryPublished entry
          in FeedItem title date <$> link
       Feed.RSSItem item ->
-        let title = fromMaybe (fromMaybe "untitled" (RSS.rssItemDescription item)) (RSS.rssItemTitle item)
+        let title = fromMaybe "untitled" (RSS.rssItemTitle item <|> RSS.rssItemDescription item)
             link = RSS.rssItemLink item
             date = RSS.rssItemPubDate item
          in FeedItem title date <$> link
