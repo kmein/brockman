@@ -24,7 +24,6 @@ in {
           ${cfg.package}/bin/brockman ${pkgs.writeText "brockman.json" (builtins.toJSON cfg.config)}
         '';
 
-        WorkingDirectory = "~";
         RuntimeDirectory = "brockman";
 
         DynamicUser = true;
