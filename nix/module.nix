@@ -25,6 +25,7 @@ in {
         '';
 
         RuntimeDirectory = "brockman";
+        StateDirectory = "brockman";
 
         DynamicUser = true;
         NoNewPrivileges = true;
