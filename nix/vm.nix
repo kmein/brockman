@@ -15,6 +15,8 @@
       'journalctl -fu brockman.service' \;
   '';
 
+  system.stateVersion = "24.11";
+
   services.charybdis = {
     enable = true;
     config = ''
