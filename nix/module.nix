@@ -10,6 +10,15 @@ in {
   };
 
   config = mkIf cfg.enable {
+    users.extraGroups.brockman = {};
+    users.extraUsers.brockman = {
+      isSystemUser = true;
+      group = "brockman";
+      home = "/var/lib/brockman";
+      homeMode = "770";
+      createHome = true;
+    };
+
     systemd.services.brockman = {
       description = "RSS to IRC broadcaster";
 
@@ -24,10 +33,9 @@ in {
           ${cfg.package}/bin/brockman ${pkgs.writeText "brockman.json" (builtins.toJSON cfg.config)}
         '';
 
-        RuntimeDirectory = "brockman";
-        StateDirectory = "brockman";
+        User = "brockman";
+        Group = "brockman";
 
-        DynamicUser = true;
         NoNewPrivileges = true;
 
         ProtectProc = "invisible";
