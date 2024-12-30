@@ -13,17 +13,18 @@
     supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
   in {
-    packages = forAllSystems (system:
-    let
-      pkgs = nixpkgs.legacyPackages.${system};
-      package = pkgs.haskellPackages.callPackage ./default.nix {};
-    in {
-      default = package;
-      brockman = package;
+    overlays.default = self: super: {
+      brockman = self.haskellPackages.callPackage ./default.nix {};
+    };
 
+    packages = forAllSystems (system: {
+      default = (import nixpkgs {
+        inherit system;
+        overlays = [ self.overlays.default ];
+      }).brockman;
       vm = nixos-generators.nixosGenerate {
-        inherit pkgs;
-        modules = [ self.nixosModule (import nix/vm.nix) ];
+        pkgs = nixpkgs.legacyPackages.${system};
+        modules = [ self.nixosModules.default (import nix/vm.nix) ];
         format = "vm-nogui";
       };
     });
@@ -62,9 +63,9 @@
       buildInputs = [ pkgs.cabal-install ];
     }));
 
-    nixosModule = { config, lib, pkgs, ... }: import nix/module.nix {
-      package = pkgs.haskellPackages.callPackage ./default.nix {};
-      inherit config lib pkgs;
+    nixosModules.default = { ... }: {
+      imports = [nix/module.nix];
+      nixpkgs.overlays = [ self.overlays.default ];
     };
   };
 }

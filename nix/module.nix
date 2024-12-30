@@ -1,11 +1,11 @@
-{ pkgs, lib, config, package ? pkgs.callPackage ../. {}, ... }:
+{ pkgs, lib, config, ... }:
 with lib;
 let
   cfg = config.services.brockman;
 in {
   options.services.brockman = {
     enable = mkEnableOption "brockman";
-    package = mkOption { type = types.package; default = package; };
+    package = mkOption { type = types.package; default = pkgs.brockman; };
     config = mkOption { type = types.attrs; };
   };
 
