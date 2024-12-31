@@ -12,4 +12,4 @@ jobs:
     - name: Install Nix
       uses: cachix/install-nix-action@v16
     - run: nix flake check
-    - run: nix build
+    - run: nix build .#vm --dry-run
