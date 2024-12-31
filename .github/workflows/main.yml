@@ -11,11 +11,5 @@ jobs:
     - uses: actions/checkout@v1
     - name: Install Nix
       uses: cachix/install-nix-action@v16
-    - name: Check formatting
-      run: |
-        dpkg --print-architecture
-        nix run .#check-formatting
-    - name: Validate configs
-      run: nix run .#check-configs
-    - name: Build
-      run: nix build .#vm --impure --dry-run
+    - run: nix flake check
+    - run: nix build
