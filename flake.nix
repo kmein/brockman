@@ -2,7 +2,7 @@
   description = "Brockman package, module and test VM.";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     nixos-generators = {
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -12,6 +12,10 @@
   outputs = { self, nixpkgs, nixos-generators }: let
     supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+    pkgsForSystem = system: import nixpkgs {
+      inherit system;
+      overlays = [ self.overlays.default ];
+    };
   in {
     overlays.default = final: prev: {
       brockman = prev.haskellPackages.callPackage ./default.nix {};
@@ -22,19 +26,18 @@
         inherit system;
         overlays = [ self.overlays.default ];
       }).brockman;
-      # vm = nixos-generators.nixosGenerate {
-      #   pkgs = nixpkgs.legacyPackages.${system};
-      #   modules = [
-      #     { nixpkgs.overlays = [ self.overlays.default ]; }
-      #     self.nixosModules.default
-      #     (import nix/vm.nix)
-      #   ];
-      #   format = "vm-nogui";
-      # };
+      vm = nixos-generators.nixosGenerate {
+        format = "vm-nogui";
+        pkgs = pkgsForSystem system;
+        modules = [
+          self.nixosModules.default
+          nix/vm.nix
+        ];
+      };
     });
 
     apps = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = pkgsForSystem system;
     in {
       generate = {
         type = "app";
@@ -47,7 +50,7 @@
     });
 
     checks = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = pkgsForSystem system;
     in {
       formatting = pkgs.runCommand "formatting" {} ''
         ${pkgs.findutils}/bin/find ${./src} -type f -exec ${pkgs.ormolu}/bin/ormolu --mode check '{}' \; > $out
@@ -56,16 +59,15 @@
         set -e
         for config in ${./config}/*.json; do
           echo === checking "$config"
-          ${self.packages.${system}.default}/bin/brockman --check "$config"
+          ${pkgs.brockman}/bin/brockman --check "$config"
         done > $out
       '';
     });
 
     devShells = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-      package = pkgs.haskellPackages.callPackage ./default.nix {};
+      pkgs = pkgsForSystem system;
     in {
-      default = package.env.overrideAttrs (old: old // {
+      default = pkgs.brockman.env.overrideAttrs (old: old // {
         buildInputs = [ pkgs.cabal-install ];
       });
     });
