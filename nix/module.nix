@@ -36,6 +36,8 @@ in {
         User = "brockman";
         Group = "brockman";
 
+        StateDirectory = "brockman";
+
         NoNewPrivileges = true;
 
         ProtectProc = "invisible";
